@@ -1,6 +1,5 @@
 # TODO
 
-- Anonymous symbols: `[small|large|[size]]`
 - Ranges: `[0-9]`
 - Variables:
 	- Declare: `[n = name]`

@@ -26,7 +26,9 @@ import sys
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
 
-RE_COMMENT = re.compile(r'\s*//.*')
+# Matches comments (lines starting with a hash)
+# e.g. \t# hello world
+RE_COMMENT = re.compile(r'\s*#.*')
 
 BLOCK_START = '['
 BLOCK_END = ']'
