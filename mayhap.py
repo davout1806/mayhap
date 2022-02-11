@@ -95,94 +95,97 @@ def choose_production(rules):
     return random.choices(productions, weights)[0]
 
 
-def log_pattern(pattern, depth=0, verbose=False):
-    '''
-    Log the given pattern to standard error, indented by its recursion depth
-    for readability.
-    '''
-    if verbose:
-        print(f'{"  " * depth}{pattern}', file=sys.stderr)
+class MayhapGenerator:
+    def __init__(self, grammar, verbose=False):
+        self.grammar = grammar
+        self.verbose = verbose
 
+    def log_pattern(self, pattern, depth=0):
+        '''
+        Log the given pattern to standard error, indented by its recursion
+        depth for readability.
+        '''
+        if self.verbose:
+            print(f'{"  " * depth}{pattern}', file=sys.stderr)
 
-def evaluate_block(grammar, block, verbose=False, depth=0):
-    '''
-    Expand the given block based on the given grammar and return the final
-    expanded string.
-    '''
-    log_pattern(f'[{block}]', depth, verbose)
+    def evaluate_block(self, block, depth=0):
+        '''
+        Expand the given block and return the final expanded string.
+        '''
+        self.log_pattern(f'[{block}]', depth)
 
-    # Choose a item from the shortlist to produce
-    shortlist = block.split('|')
-    if len(shortlist) > 1:
-        rules = [parse_rule(rule) for rule in shortlist]
+        # Choose a item from the shortlist to produce
+        shortlist = block.split('|')
+        if len(shortlist) > 1:
+            rules = [parse_rule(rule) for rule in shortlist]
+            production = choose_production(rules)
+            return self.evaluate_pattern(production, depth)
+
+        match = RE_RANGE.match(block)
+        if match:
+            bound1 = int(match[1])
+            bound2 = int(match[2])
+            lower = min(bound1, bound2)
+            upper = max(bound1, bound2)
+            choice = str(random.choice(range(lower, upper + 1)))
+            self.log_pattern(choice, depth)
+            return choice
+
+        # Substitute in a randomly chosen production of this symbol
+        symbol = block
+        rules = self.grammar[symbol]
         production = choose_production(rules)
-        return evaluate_pattern(grammar, production, verbose, depth)
+        return self.evaluate_pattern(production, depth)
 
-    match = RE_RANGE.match(block)
-    if match:
-        bound1 = int(match[1])
-        bound2 = int(match[2])
-        lower = min(bound1, bound2)
-        upper = max(bound1, bound2)
-        choice = str(random.choice(range(lower, upper + 1)))
-        log_pattern(choice, depth, verbose)
-        return choice
+    def evaluate_pattern(self, pattern, depth=0):
+        '''
+        Expand all blocks in the given pattern and return the final expanded
+        string.
+        '''
+        self.log_pattern(pattern, depth)
 
-    # Substitute in a randomly chosen production of this symbol
-    symbol = block
-    rules = grammar[symbol]
-    production = choose_production(rules)
-    return evaluate_pattern(grammar, production, verbose, depth)
+        stack = []
+        i = 0
+        while i < len(pattern):
+            # If a block starts here, push its start index on the stack
+            if pattern[i] == BLOCK_START:
+                stack.append(i)
 
+            # If a block ends here, pop its start index off the stack and
+            # resolve it
+            elif pattern[i] == BLOCK_END:
+                start = stack.pop()
+                end = i
+                block = pattern[start + 1:end]
+                production = self.evaluate_block(block, depth + 1)
+                pattern = (pattern[:start] +
+                           production +
+                           pattern[end + 1:])
 
-def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
-    '''
-    Expand all blocks in the given pattern based on the given grammar and
-    return the final expanded string.
-    '''
-    log_pattern(pattern, depth, verbose)
+                self.log_pattern(pattern, depth)
 
-    stack = []
-    i = 0
-    while i < len(pattern):
-        # If a block starts here, push its start index on the stack
-        if pattern[i] == BLOCK_START:
-            stack.append(i)
+                # Assume the production is fully resolved
+                # Jump to the next unprocessed index
+                i = start + len(production)
+                continue
 
-        # If a block ends here, pop its start index off the stack and resolve
-        elif pattern[i] == BLOCK_END:
-            start = stack.pop()
-            end = i
-            block = pattern[start + 1:end]
-            production = evaluate_block(grammar, block, verbose, depth + 1)
-            pattern = (pattern[:start] +
-                       production +
-                       pattern[end + 1:])
+            i += 1
 
-            log_pattern(pattern, depth, verbose)
+        return pattern
 
-            # Assume the production is fully resolved
-            # Jump to the next unprocessed index
-            i = start + len(production)
-            continue
+    def evaluate_input(self, pattern):
+        '''
+        Evaluate the given pattern as an input. If the pattern is the name of a
+        symbol, expand and resolve it. Otherwise, evaluate the input as a
+        pattern.
+        '''
+        # If a symbol name was given, expand it
+        if pattern in self.grammar:
+            pattern = choose_production(self.grammar[pattern])
+            return self.evaluate_pattern(pattern)
 
-        i += 1
-
-    return pattern
-
-
-def evaluate_input(grammar, pattern, verbose=False):
-    '''
-    Evaluate the given pattern as an input. If the pattern is the name of a
-    symbol, expand and resolve it. Otherwise, evaluate the input as a pattern.
-    '''
-    # If a symbol name was given, expand it
-    if pattern in grammar:
-        pattern = choose_production(grammar[pattern])
-        return evaluate_pattern(grammar, pattern, verbose)
-
-    # Otherwise, interpret the input as a pattern
-    return evaluate_pattern(grammar, pattern, verbose)
+        # Otherwise, interpret the input as a pattern
+        return self.evaluate_pattern(pattern)
 
 
 def main():
@@ -212,15 +215,17 @@ def main():
         dump = json.dumps(grammar, indent=4)
         print(f'Parsed grammar:\n{dump}', file=sys.stderr)
 
+    generator = MayhapGenerator(grammar, args.verbose)
+
     # If a pattern was given, generate it and exit
     if args.pattern:
-        print(evaluate_input(grammar, args.pattern, args.verbose))
+        print(generator.evaluate_input(args.pattern))
         return 0
 
     # Otherwise, read standard input
     try:
         for line in sys.stdin:
-            print(evaluate_input(grammar, line.strip(), args.verbose))
+            print(generator.evaluate_input(line.strip()))
     except KeyboardInterrupt:
         # Quietly handle SIGINT, like cat does
         print()

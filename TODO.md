@@ -22,4 +22,5 @@
 	- Limit symbol names to lowercase letters + underscores
 - Force pluralization: `[thing+]`
 - Parameterized rules: `greet(name)`, `Hi, $name!`, `[greet('Bob')]`
+- Allow escaping blocks
 - Import other grammars via preprocessor directives: `@import noun`
