@@ -22,17 +22,25 @@ import re
 import sys
 
 
+# Matches a number preceded by a caret at the end of the line
+# e.g. ^4.25
+RE_WEIGHT = re.compile(r'\^(([0-9]*[.])?[0-9]+)$')
+
+# Matches nonterminal symbols in brackets
+# e.g. [symbol]
+RE_SYMBOL = re.compile(r'\[(.+?)\]')
+
+# Matches shortlists in braces
+# e.g. {option 1|option 2|[symbol]}
+RE_SHORTLIST = re.compile(r'\{(.+?)\}')
+
+
 def parse(grammar_file):
     '''
     Parse the grammar in the given file as a dictionary mapping symbols to
     lists of weighted expansion rules. Assumes the file is open (as is the case
     for TextIOWrappers generated from argparse arguments).
     '''
-    # Matches a number preceded by a caret at the end of the line
-    # e.g. ^4.25
-    weight_re = re.compile(r'\s*\^(([0-9]*[.])?[0-9]+)$')
-
-    # Parse the given file line-by-line
     current = None
     grammar = {}
     for line in grammar_file:
@@ -43,10 +51,10 @@ def parse(grammar_file):
 
             # Indented lines contain expansion rules
             if line[0].isspace():
-                expansion = line.strip()
+                rule = line.strip()
 
                 # Look for an explicit weight
-                weight_match = weight_re.search(expansion)
+                weight_match = RE_WEIGHT.search(rule)
                 if weight_match is not None:
                     weight = float(weight_match[1].strip())
                     string_end = weight_match.start()
@@ -54,9 +62,10 @@ def parse(grammar_file):
                 # Default to 1 weight otherwise
                 else:
                     weight = 1
-                    string_end = len(expansion)
+                    string_end = len(rule)
 
-                grammar[current].append((weight, expansion[:string_end]))
+                expansion = rule[:string_end].strip()
+                grammar[current].append((weight, expansion))
 
             # Unindented lines contain symbols
             else:
@@ -66,7 +75,7 @@ def parse(grammar_file):
     return grammar
 
 
-def choose(expansions):
+def choose_expansion(expansions):
     '''
     Choose an expansion from the given weighted list of expansions.
     '''
@@ -75,24 +84,20 @@ def choose(expansions):
     return random.choices(strings, weights)[0]
 
 
+def log_pattern(pattern, depth=0):
+    print(f'{"  " * depth}{pattern}', file=sys.stderr)
+
+
 def generate(grammar, pattern, verbose=False, depth=0):
     '''
     Expand all expressions in the given pattern based on the given grammar and
     return the final expanded string.
     '''
     if verbose:
-        print(f'{"  " * depth}{pattern}', file=sys.stderr)
+        log_pattern(pattern, depth)
 
-    # Matches bracketed symbols
-    # e.g. [symbol]
-    nonterminal = re.compile(r'\[(.+?)\]')
-
-    # Matches shorthand lists in braces
-    # e.g. {option 1|option 2|[symbol]}
-    shorthand = re.compile(r'\{(.+?)\}')
-
-    # Expand all shorthand lists
-    match = shorthand.search(pattern)
+    # Expand all shortlists
+    match = RE_SHORTLIST.search(pattern)
     while match:
         expansions = match[1].split('|')
         expansion = random.choice(expansions)
@@ -101,22 +106,22 @@ def generate(grammar, pattern, verbose=False, depth=0):
                    pattern[match.end():])
 
         if verbose:
-            print(f'{"  " * depth}{pattern}', file=sys.stderr)
-        match = shorthand.search(pattern)
+            log_pattern(pattern, depth)
+        match = RE_SHORTLIST.search(pattern)
 
-    # Expand all bracketed nonterminal symbols
-    match = nonterminal.search(pattern)
+    # Expand all symbols
+    match = RE_SYMBOL.search(pattern)
     while match:
         # Substitute in a randomly chosen expansion of this symbol
         symbol = match[1].strip()
-        expansion = choose(grammar[symbol])
+        expansion = choose_expansion(grammar[symbol])
         pattern = (pattern[:match.start()] +
                    generate(grammar, expansion, verbose, depth + 1) +
                    pattern[match.end():])
 
         if verbose:
-            print(f'{"  " * depth}{pattern}', file=sys.stderr)
-        match = nonterminal.search(pattern)
+            log_pattern(pattern, depth)
+        match = RE_SYMBOL.search(pattern)
 
     return pattern
 
@@ -160,7 +165,7 @@ def main():
 
             # If a symbol name was given, expand it
             if line in grammar:
-                pattern = choose(grammar[line])
+                pattern = choose_expansion(grammar[line])
                 print(generate(grammar, pattern, args.verbose))
 
             # Otherwise, interpret the input as a pattern
