@@ -1,9 +1,7 @@
 # TODO
 
-- Anonymous symbols: `[small|medium|large]`
-- Ranges:
-	- Basic: `[0-9]`
-	- Custom step size: `[1000-9000+1000]` (step size of 1000)
+- Anonymous symbols: `[small|large|[size]]`
+- Ranges: `[0-9]`
 - Variables:
 	- Declare: `[n = name]`
 	- Access: `[$n]`
@@ -12,12 +10,12 @@
 	- Pattern-local unique choice: `[symbol?]`
 	- Globally unique choice: `[symbol??]`
 - Multiple selection:
-	- No spacing: `[3-5 * letter]`
-	- List ("a, b, and c"): `[3-5 *& word]`
-	- Custom separator: `[3-5 * '/' & number]` for a `/` separator
+	- No spacing: `[3 * letter]`
+	- List ("a, b, and c"): `[3 *& word]`
+	- Custom separator: `[3 * '/' & number]` for a `/` separator
 - Context-sensitive inflections:
-	- Articles: `a(n) [animal]`
-	- Pluralization: `[5-10] item(s)`
+	- Articles: `a[n] [animal]`
+	- Pluralization: `[5-10] item[s]`
 - Case:
 	- Inherit case: `[symbol_name]`
 	- Sentence case: `[Symbol_name]` or `[symbol_name!]`
@@ -25,4 +23,5 @@
 	- Upper case: `[SYMBOL_NAME]` or `[symbol_name!!!]`
 	- Limit symbol names to lowercase letters + underscores
 - Force pluralization: `[thing+]`
+- Parameterized rules: `greet(name)`, `Hi, $name!`, `[greet('Bob')]`
 - Import other grammars via preprocessor directives: `@import noun`
