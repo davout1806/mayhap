@@ -24,7 +24,7 @@ import sys
 
 # Matches a number preceded by a caret at the end of the line
 # e.g. ^4.25
-RE_WEIGHT = re.compile(r'\^(([0-9]*[.])?[0-9]+)$')
+RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
 
 # Matches nonterminal symbols in brackets
 # e.g. [symbol]
@@ -33,6 +33,25 @@ RE_SYMBOL = re.compile(r'\[(.+?)\]')
 # Matches shortlists in braces
 # e.g. {option 1|option 2|[symbol]}
 RE_SHORTLIST = re.compile(r'\{(.+?)\}')
+
+
+def parse_rule(rule):
+    '''
+    Parses an expansion rule into a weight and a expansion string.
+    '''
+    # Look for an explicit weight
+    weight_match = RE_WEIGHT.search(rule)
+    if weight_match is not None:
+        weight = float(weight_match[1].strip())
+        string_end = weight_match.start()
+
+    # Default to 1 weight otherwise
+    else:
+        weight = 1
+        string_end = len(rule)
+
+    expansion = rule[:string_end]
+    return weight, expansion
 
 
 def parse(grammar_file):
@@ -52,19 +71,8 @@ def parse(grammar_file):
             # Indented lines contain expansion rules
             if line[0].isspace():
                 rule = line.strip()
-
-                # Look for an explicit weight
-                weight_match = RE_WEIGHT.search(rule)
-                if weight_match is not None:
-                    weight = float(weight_match[1].strip())
-                    string_end = weight_match.start()
-
-                # Default to 1 weight otherwise
-                else:
-                    weight = 1
-                    string_end = len(rule)
-
-                expansion = rule[:string_end].strip()
+                weight, expansion = parse_rule(rule)
+                expansion = expansion.strip()
                 grammar[current].append((weight, expansion))
 
             # Unindented lines contain symbols
@@ -99,8 +107,8 @@ def generate(grammar, pattern, verbose=False, depth=0):
     # Expand all shortlists
     match = RE_SHORTLIST.search(pattern)
     while match:
-        expansions = match[1].split('|')
-        expansion = random.choice(expansions)
+        shortlist = match[1].split('|')
+        expansion = choose_expansion([parse_rule(rule) for rule in shortlist])
         pattern = (pattern[:match.start()] +
                    expansion +
                    pattern[match.end():])
