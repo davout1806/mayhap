@@ -22,6 +22,10 @@ import re
 import sys
 
 
+# Matches inline symbol definitions
+# e.g. symbol = expansion [other symbol] rule
+RE_INLINE = re.compile(r'(.+?) = (.+)')
+
 # Matches a number preceded by a caret at the end of the line
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
@@ -54,32 +58,42 @@ def parse_rule(rule):
     return weight, expansion
 
 
-def parse(grammar_file):
+def parse_grammar(grammar_file):
     '''
     Parse the grammar in the given file as a dictionary mapping symbols to
     lists of weighted expansion rules. Assumes the file is open (as is the case
     for TextIOWrappers generated from argparse arguments).
     '''
-    current = None
+    current_symbol = None
     grammar = {}
     for line in grammar_file:
-        if line.strip():
+        stripped = line.strip()
+        if stripped:
             # Ignore comments
             if len(line) >= 2 and line.strip()[:2] == '//':
                 continue
 
-            # Indented lines contain expansion rules
-            if line[0].isspace():
-                rule = line.strip()
+            # If this matches an inline expansion, parse it
+            inline_match = RE_INLINE.match(stripped)
+            if inline_match is not None:
+                symbol = inline_match[1].strip()
+                rule = inline_match[2].strip()
                 weight, expansion = parse_rule(rule)
                 expansion = expansion.strip()
-                grammar[current].append((weight, expansion))
+                grammar[symbol] = [(weight, expansion)]
+                continue
+
+            # Indented lines contain expansion rules
+            if line[0].isspace():
+                rule = stripped
+                weight, expansion = parse_rule(rule)
+                expansion = expansion.strip()
+                grammar[current_symbol].append((weight, expansion))
 
             # Unindented lines contain symbols
             else:
-                symbol = line.strip()
-                current = symbol
-                grammar[symbol] = []
+                current_symbol = stripped
+                grammar[current_symbol] = []
     return grammar
 
 
@@ -120,8 +134,11 @@ def generate(grammar, pattern, verbose=False, depth=0):
     # Expand all symbols
     match = RE_SYMBOL.search(pattern)
     while match:
-        # Substitute in a randomly chosen expansion of this symbol
         symbol = match[1].strip()
+        if verbose:
+            log_pattern(match[0], depth + 1)
+
+        # Substitute in a randomly chosen expansion of this symbol
         expansion = choose_expansion(grammar[symbol])
         pattern = (pattern[:match.start()] +
                    generate(grammar, expansion, verbose, depth + 1) +
@@ -156,7 +173,7 @@ def main():
                  'stderr, so stdout is still clean')
     args = parser.parse_args()
 
-    grammar = parse(args.grammar)
+    grammar = parse_grammar(args.grammar)
     if args.verbose:
         dump = json.dumps(grammar, indent=4)
         print(f'Parsed grammar:\n{dump}\n', file=sys.stderr)
