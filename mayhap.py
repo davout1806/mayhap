@@ -22,10 +22,6 @@ import re
 import sys
 
 
-# Matches inline symbol definitions
-# e.g. symbol = production [other symbol] rule
-RE_INLINE = re.compile(r'(.+?) = (.+)')
-
 # Matches a number preceded by a caret at the end of the line
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
@@ -73,16 +69,6 @@ def parse_grammar(grammar_file):
         if stripped:
             # Ignore comments
             if len(line) >= 2 and line.strip()[:2] == '//':
-                continue
-
-            # If this matches an inline rule, parse it
-            inline_match = RE_INLINE.match(stripped)
-            if inline_match is not None:
-                symbol = inline_match[1].strip()
-                rule = inline_match[2].strip()
-                weight, production = parse_rule(rule)
-                production = production.strip()
-                grammar[symbol] = [(weight, production)]
                 continue
 
             # Indented lines contain production rules
