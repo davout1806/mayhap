@@ -99,36 +99,17 @@ def parse_grammar(grammar_file):
     return grammar
 
 
-def choose_production(productions):
+def choose_production(rules):
     '''
-    Choose an production from the given weighted list of productions.
+    Choose an production from the given weighted list of rules.
     '''
-    weights = [production[0] for production in productions]
-    strings = [production[1] for production in productions]
-    return random.choices(strings, weights)[0]
+    weights = [rule[0] for rule in rules]
+    productions = [rule[1] for rule in rules]
+    return random.choices(productions, weights)[0]
 
 
 def log_pattern(pattern, depth=0):
     print(f'{"  " * depth}{pattern}', file=sys.stderr)
-
-
-def evaluate_square(grammar, block, verbose=False, depth=0):
-    if verbose:
-        log_pattern(f'[{block}]', depth + 1)
-
-    # Substitute in a randomly chosen production of this symbol
-    pattern = choose_production(grammar[block])
-    return evaluate_pattern(grammar, pattern, verbose, depth + 1)
-
-
-def evaluate_curly(grammar, block, verbose=False, depth=0):
-    if verbose:
-        log_pattern(f'{{{block}}}', depth + 1)
-
-    # Choose a item from the shortlist to produce
-    shortlist = block.split('|')
-    production = choose_production([parse_rule(rule) for rule in shortlist])
-    return production
 
 
 def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
@@ -142,7 +123,17 @@ def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
     # Expand all shortlists
     match = RE_CURLY.search(pattern)
     while match:
-        production = evaluate_curly(grammar, match[1], verbose, depth + 1)
+        if verbose:
+            log_pattern(match[0], depth + 1)
+
+        block = match[1]
+
+        # Choose a item from the shortlist to produce
+        shortlist = block.split('|')
+        rules = [parse_rule(rule) for rule in shortlist]
+        production = choose_production(rules)
+        production = evaluate_pattern(grammar, production, verbose, depth + 1)
+
         pattern = (pattern[:match.start()] +
                    production +
                    pattern[match.end():])
@@ -154,10 +145,15 @@ def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
     # Expand all symbols
     match = RE_SQUARE.search(pattern)
     while match:
-        production = evaluate_square(grammar,
-                                     match[1].strip(),
-                                     verbose,
-                                     depth + 1)
+        if verbose:
+            log_pattern(match[0], depth + 1)
+
+        block = match[1].strip()
+
+        # Substitute in a randomly chosen production of this symbol
+        rules = grammar[block]
+        production = choose_production(rules)
+        production = evaluate_pattern(grammar, production, verbose, depth + 1)
 
         pattern = (pattern[:match.start()] +
                    production +
