@@ -25,9 +25,14 @@ import sys
 def parse(grammar_file):
     '''
     Parse the grammar in the given file as a dictionary mapping symbols to
-    lists of expansion rules. Assumes the file is open (as is the case for
-    TextIOWrappers generated from argparse arguments).
+    lists of weighted expansion rules. Assumes the file is open (as is the case
+    for TextIOWrappers generated from argparse arguments).
     '''
+    # Matches a number preceded by a caret at the end of the line
+    # e.g. ^4.25
+    weight_re = re.compile(r'\s*\^(([0-9]*[.])?[0-9]+)$')
+
+    # Parse the given file line-by-line
     current = None
     grammar = {}
     for line in grammar_file:
@@ -38,13 +43,36 @@ def parse(grammar_file):
 
             # Indented lines contain expansion rules
             if line[0].isspace():
-                grammar[current].append(line.strip())
+                expansion = line.strip()
+
+                # Look for an explicit weight
+                weight_match = weight_re.search(expansion)
+                if weight_match is not None:
+                    weight = float(weight_match[1].strip())
+                    string_end = weight_match.start()
+
+                # Default to 1 weight otherwise
+                else:
+                    weight = 1
+                    string_end = len(expansion)
+
+                grammar[current].append((weight, expansion[:string_end]))
 
             # Unindented lines contain symbols
             else:
-                current = line.strip()
-                grammar[current] = []
+                symbol = line.strip()
+                current = symbol
+                grammar[symbol] = []
     return grammar
+
+
+def choose(expansions):
+    '''
+    Choose an expansion from the given weighted list of expansions.
+    '''
+    weights = [expansion[0] for expansion in expansions]
+    strings = [expansion[1] for expansion in expansions]
+    return random.choices(strings, weights)[0]
 
 
 def generate(grammar, pattern, verbose=False, depth=0):
@@ -55,13 +83,16 @@ def generate(grammar, pattern, verbose=False, depth=0):
     if verbose:
         print(f'{"  " * depth}{pattern}', file=sys.stderr)
 
+    # Matches bracketed symbols
+    # e.g. [symbol]
+    nonterminal = re.compile(r'\[(.+?)\]')
+
     # Expand all bracketed nonterminal symbols
-    nonterminal = re.compile(r'\[([^\]]*)\]')
     match = nonterminal.search(pattern)
     while match:
         # Substitute in a randomly chosen expansion of this symbol
         symbol = match[1]
-        expansion = random.choice(grammar[symbol])
+        expansion = choose(grammar[symbol])
         pattern = (pattern[:match.start()] +
                    generate(grammar, expansion, verbose, depth + 1) +
                    pattern[match.end():])
@@ -112,7 +143,7 @@ def main():
 
             # If a symbol name was given, expand it
             if line in grammar:
-                pattern = random.choice(grammar[line])
+                pattern = choose(grammar[line])
                 print(generate(grammar, pattern, args.verbose))
 
             # Otherwise, interpret the input as a pattern
