@@ -1,6 +1,5 @@
 # TODO
 
-- Ranges: `[0-9]`
 - Variables:
 	- Declare: `[n = name]`
 	- Access: `[$n]`

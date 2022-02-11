@@ -24,11 +24,15 @@ import sys
 
 # Matches a number preceded by a caret at the end of the line
 # e.g. ^4.25
-RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
+RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)$')
 
 # Matches comments (lines starting with a hash)
 # e.g. \t# hello world
 RE_COMMENT = re.compile(r'\s*#.*')
+
+# Matches integer ranges separated by a hyphen
+# e.g. 10-20
+RE_RANGE = re.compile(r'\s*([+-]?\d+)\s*-\s*([+-]?\d+)\s*')
 
 BLOCK_START = '['
 BLOCK_END = ']'
@@ -39,10 +43,10 @@ def parse_rule(rule):
     Parses an production rule into a weight and a production string.
     '''
     # Look for an explicit weight
-    weight_match = RE_WEIGHT.search(rule)
-    if weight_match is not None:
-        weight = float(weight_match[1].strip())
-        string_end = weight_match.start()
+    match = RE_WEIGHT.search(rule)
+    if match:
+        weight = float(match[1].strip())
+        string_end = match.start()
 
     # Default to 1 weight otherwise
     else:
@@ -91,12 +95,13 @@ def choose_production(rules):
     return random.choices(productions, weights)[0]
 
 
-def log_pattern(pattern, depth=0):
+def log_pattern(pattern, depth=0, verbose=False):
     '''
     Log the given pattern to standard error, indented by its recursion depth
     for readability.
     '''
-    print(f'{"  " * depth}{pattern}', file=sys.stderr)
+    if verbose:
+        print(f'{"  " * depth}{pattern}', file=sys.stderr)
 
 
 def evaluate_block(grammar, block, verbose=False, depth=0):
@@ -104,8 +109,7 @@ def evaluate_block(grammar, block, verbose=False, depth=0):
     Expand the given block based on the given grammar and return the final
     expanded string.
     '''
-    if verbose:
-        log_pattern(f'[{block}]', depth)
+    log_pattern(f'[{block}]', depth, verbose)
 
     # Choose a item from the shortlist to produce
     shortlist = block.split('|')
@@ -113,6 +117,16 @@ def evaluate_block(grammar, block, verbose=False, depth=0):
         rules = [parse_rule(rule) for rule in shortlist]
         production = choose_production(rules)
         return evaluate_pattern(grammar, production, verbose, depth)
+
+    match = RE_RANGE.match(block)
+    if match:
+        bound1 = int(match[1])
+        bound2 = int(match[2])
+        lower = min(bound1, bound2)
+        upper = max(bound1, bound2)
+        choice = str(random.choice(range(lower, upper + 1)))
+        log_pattern(choice, depth, verbose)
+        return choice
 
     # Substitute in a randomly chosen production of this symbol
     symbol = block
@@ -126,8 +140,7 @@ def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
     Expand all blocks in the given pattern based on the given grammar and
     return the final expanded string.
     '''
-    if verbose:
-        log_pattern(pattern, depth)
+    log_pattern(pattern, depth, verbose)
 
     stack = []
     i = 0
@@ -146,8 +159,7 @@ def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
                        production +
                        pattern[end + 1:])
 
-            if verbose:
-                log_pattern(pattern, depth)
+            log_pattern(pattern, depth, verbose)
 
             # Assume the production is fully resolved
             # Jump to the next unprocessed index
