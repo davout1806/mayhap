@@ -26,15 +26,10 @@ import sys
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
 
-# Matches square blocks (paired brackets)
-# e.g. [symbol]
-# e.g. [symbol.pluralForm.upperCase]
-RE_SQUARE = re.compile(r'\[(.+?)\]')
+RE_COMMENT = re.compile(r'\s*//.*')
 
-# Matches curly blocks (paired braces)
-# e.g. {s}
-# e.g. {option 1^2|5-9|[symbol]}
-RE_CURLY = re.compile(r'\{(.+?)\}')
+BLOCK_START = '['
+BLOCK_END = ']'
 
 
 def parse_rule(rule):
@@ -68,7 +63,7 @@ def parse_grammar(grammar_file):
         stripped = line.strip()
         if stripped:
             # Ignore comments
-            if len(line) >= 2 and line.strip()[:2] == '//':
+            if RE_COMMENT.match(stripped):
                 continue
 
             # Indented lines contain production rules
@@ -95,64 +90,78 @@ def choose_production(rules):
 
 
 def log_pattern(pattern, depth=0):
+    '''
+    Log the given pattern to standard error, indented by its recursion depth
+    for readability.
+    '''
     print(f'{"  " * depth}{pattern}', file=sys.stderr)
+
+
+def evaluate_block(grammar, block, verbose=False, depth=0):
+    '''
+    Expand the given block based on the given grammar and return the final
+    expanded string.
+    '''
+    if verbose:
+        log_pattern(f'[{block}]', depth)
+
+    # Choose a item from the shortlist to produce
+    shortlist = block.split('|')
+    if len(shortlist) > 1:
+        rules = [parse_rule(rule) for rule in shortlist]
+        production = choose_production(rules)
+        return evaluate_pattern(grammar, production, verbose, depth)
+
+    # Substitute in a randomly chosen production of this symbol
+    symbol = block
+    rules = grammar[symbol]
+    production = choose_production(rules)
+    return evaluate_pattern(grammar, production, verbose, depth)
 
 
 def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
     '''
-    Expand all expressions in the given pattern based on the given grammar and
+    Expand all blocks in the given pattern based on the given grammar and
     return the final expanded string.
     '''
     if verbose:
         log_pattern(pattern, depth)
 
-    # Expand all shortlists
-    match = RE_CURLY.search(pattern)
-    while match:
-        if verbose:
-            log_pattern(match[0], depth + 1)
+    stack = []
+    i = 0
+    while i < len(pattern):
+        # If a block starts here, push its start index on the stack
+        if pattern[i] == BLOCK_START:
+            stack.append(i)
 
-        block = match[1]
+        # If a block ends here, pop its start index off the stack and resolve
+        elif pattern[i] == BLOCK_END:
+            start = stack.pop()
+            end = i
+            block = pattern[start + 1:end]
+            production = evaluate_block(grammar, block, verbose, depth + 1)
+            pattern = (pattern[:start] +
+                       production +
+                       pattern[end + 1:])
 
-        # Choose a item from the shortlist to produce
-        shortlist = block.split('|')
-        rules = [parse_rule(rule) for rule in shortlist]
-        production = choose_production(rules)
-        production = evaluate_pattern(grammar, production, verbose, depth + 1)
+            if verbose:
+                log_pattern(pattern, depth)
 
-        pattern = (pattern[:match.start()] +
-                   production +
-                   pattern[match.end():])
+            # Assume the production is fully resolved
+            # Jump to the next unprocessed index
+            i = start + len(production)
+            continue
 
-        if verbose:
-            log_pattern(pattern, depth)
-        match = RE_CURLY.search(pattern)
-
-    # Expand all symbols
-    match = RE_SQUARE.search(pattern)
-    while match:
-        if verbose:
-            log_pattern(match[0], depth + 1)
-
-        block = match[1].strip()
-
-        # Substitute in a randomly chosen production of this symbol
-        rules = grammar[block]
-        production = choose_production(rules)
-        production = evaluate_pattern(grammar, production, verbose, depth + 1)
-
-        pattern = (pattern[:match.start()] +
-                   production +
-                   pattern[match.end():])
-
-        if verbose:
-            log_pattern(pattern, depth)
-        match = RE_SQUARE.search(pattern)
+        i += 1
 
     return pattern
 
 
 def evaluate_input(grammar, pattern, verbose=False):
+    '''
+    Evaluate the given pattern as an input. If the pattern is the name of a
+    symbol, expand and resolve it. Otherwise, evaluate the input as a pattern.
+    '''
     # If a symbol name was given, expand it
     if pattern in grammar:
         pattern = choose_production(grammar[pattern])
@@ -187,7 +196,7 @@ def main():
     grammar = parse_grammar(args.grammar)
     if args.verbose:
         dump = json.dumps(grammar, indent=4)
-        print(f'Parsed grammar:\n{dump}\n', file=sys.stderr)
+        print(f'Parsed grammar:\n{dump}', file=sys.stderr)
 
     # If a pattern was given, generate it and exit
     if args.pattern:
