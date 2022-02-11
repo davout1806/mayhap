@@ -32,7 +32,7 @@ RE_COMMENT = re.compile(r'\s*#.*')
 
 # Matches integer ranges separated by a hyphen
 # e.g. 10-20
-RE_RANGE = re.compile(r'\s*([+-]?\d+)\s*-\s*([+-]?\d+)\s*')
+RE_RANGE = re.compile(r'([+-]?\d+)\s*-\s*([+-]?\d+)')
 
 # Matches variable definitions (variable name followed by equals and the value)
 # e.g. _0varName= [symbol] pattern [2-5]
@@ -99,8 +99,8 @@ def choose_production(rules):
     Choose an production from the given weighted list of rules.
     '''
     weights = [rule[0] for rule in rules]
-    productions = [rule[1] for rule in rules]
-    return random.choices(productions, weights)[0]
+    rule = random.choices(rules, weights)[0]
+    return rule[1]
 
 
 class MayhapGenerator:
@@ -129,6 +129,8 @@ class MayhapGenerator:
             rules = [parse_rule(rule) for rule in shortlist]
             production = choose_production(rules)
             return self.evaluate_pattern(production, depth)
+
+        block = block.strip()
 
         match = RE_RANGE.match(block)
         if match:
