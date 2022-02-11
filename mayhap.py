@@ -108,7 +108,7 @@ def generate(grammar, pattern, verbose=False, depth=0):
     match = nonterminal.search(pattern)
     while match:
         # Substitute in a randomly chosen expansion of this symbol
-        symbol = match[1]
+        symbol = match[1].strip()
         expansion = choose(grammar[symbol])
         pattern = (pattern[:match.start()] +
                    generate(grammar, expansion, verbose, depth + 1) +
