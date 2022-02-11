@@ -1,10 +1,10 @@
-// Simplified version of the example from the homepage of perchance.org
+// Example from the homepage of perchance.org
 output
 	Your [pack] contains [item], [item] and [item].
 
 item
 	some coins
-	an old ring
+	an old {silver|bronze} ring
 	a handkerchief
 	a shard of bone
 	some lint

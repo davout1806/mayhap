@@ -87,6 +87,23 @@ def generate(grammar, pattern, verbose=False, depth=0):
     # e.g. [symbol]
     nonterminal = re.compile(r'\[(.+?)\]')
 
+    # Matches shorthand lists in braces
+    # e.g. {option 1|option 2|[symbol]}
+    shorthand = re.compile(r'\{(.+?)\}')
+
+    # Expand all shorthand lists
+    match = shorthand.search(pattern)
+    while match:
+        expansions = match[1].split('|')
+        expansion = random.choice(expansions)
+        pattern = (pattern[:match.start()] +
+                   expansion +
+                   pattern[match.end():])
+
+        if verbose:
+            print(f'{"  " * depth}{pattern}', file=sys.stderr)
+        match = shorthand.search(pattern)
+
     # Expand all bracketed nonterminal symbols
     match = nonterminal.search(pattern)
     while match:
