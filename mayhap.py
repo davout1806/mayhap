@@ -151,6 +151,16 @@ def generate(grammar, pattern, verbose=False, depth=0):
     return pattern
 
 
+def generate_from_input(grammar, pattern, verbose=False):
+    # If a symbol name was given, expand it
+    if pattern in grammar:
+        pattern = choose_expansion(grammar[pattern])
+        return generate(grammar, pattern, verbose)
+
+    # Otherwise, interpret the input as a pattern
+    return generate(grammar, pattern, verbose)
+
+
 def main():
     '''
     Parse arguments and handle input and output.
@@ -180,22 +190,13 @@ def main():
 
     # If a pattern was given, generate it and exit
     if args.pattern:
-        print(generate(grammar, args.pattern, args.verbose))
+        print(generate_from_input(grammar, args.pattern, args.verbose))
         return 0
 
     # Otherwise, read standard input
     try:
         for line in sys.stdin:
-            line = line.strip()
-
-            # If a symbol name was given, expand it
-            if line in grammar:
-                pattern = choose_expansion(grammar[line])
-                print(generate(grammar, pattern, args.verbose))
-
-            # Otherwise, interpret the input as a pattern
-            else:
-                print(generate(grammar, line, args.verbose))
+            print(generate_from_input(grammar, line.strip(), args.verbose))
     except KeyboardInterrupt:
         # Quietly handle SIGINT, like cat does
         print()
