@@ -23,25 +23,27 @@ import sys
 
 
 # Matches inline symbol definitions
-# e.g. symbol = expansion [other symbol] rule
+# e.g. symbol = production [other symbol] rule
 RE_INLINE = re.compile(r'(.+?) = (.+)')
 
 # Matches a number preceded by a caret at the end of the line
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^(([0-9]*\.)?[0-9]+)$')
 
-# Matches nonterminal symbols in brackets
+# Matches square blocks (paired brackets)
 # e.g. [symbol]
-RE_SYMBOL = re.compile(r'\[(.+?)\]')
+# e.g. [symbol.pluralForm.upperCase]
+RE_SQUARE = re.compile(r'\[(.+?)\]')
 
-# Matches shortlists in braces
-# e.g. {option 1|option 2|[symbol]}
-RE_SHORTLIST = re.compile(r'\{(.+?)\}')
+# Matches curly blocks (paired braces)
+# e.g. {s}
+# e.g. {option 1^2|5-9|[symbol]}
+RE_CURLY = re.compile(r'\{(.+?)\}')
 
 
 def parse_rule(rule):
     '''
-    Parses an expansion rule into a weight and a expansion string.
+    Parses an production rule into a weight and a production string.
     '''
     # Look for an explicit weight
     weight_match = RE_WEIGHT.search(rule)
@@ -54,15 +56,15 @@ def parse_rule(rule):
         weight = 1
         string_end = len(rule)
 
-    expansion = rule[:string_end]
-    return weight, expansion
+    production = rule[:string_end]
+    return weight, production
 
 
 def parse_grammar(grammar_file):
     '''
     Parse the grammar in the given file as a dictionary mapping symbols to
-    lists of weighted expansion rules. Assumes the file is open (as is the case
-    for TextIOWrappers generated from argparse arguments).
+    lists of weighted production rules. Assumes the file is open (as is the
+    case for TextIOWrappers generated from argparse arguments).
     '''
     current_symbol = None
     grammar = {}
@@ -73,22 +75,22 @@ def parse_grammar(grammar_file):
             if len(line) >= 2 and line.strip()[:2] == '//':
                 continue
 
-            # If this matches an inline expansion, parse it
+            # If this matches an inline rule, parse it
             inline_match = RE_INLINE.match(stripped)
             if inline_match is not None:
                 symbol = inline_match[1].strip()
                 rule = inline_match[2].strip()
-                weight, expansion = parse_rule(rule)
-                expansion = expansion.strip()
-                grammar[symbol] = [(weight, expansion)]
+                weight, production = parse_rule(rule)
+                production = production.strip()
+                grammar[symbol] = [(weight, production)]
                 continue
 
-            # Indented lines contain expansion rules
+            # Indented lines contain production rules
             if line[0].isspace():
                 rule = stripped
-                weight, expansion = parse_rule(rule)
-                expansion = expansion.strip()
-                grammar[current_symbol].append((weight, expansion))
+                weight, production = parse_rule(rule)
+                production = production.strip()
+                grammar[current_symbol].append((weight, production))
 
             # Unindented lines contain symbols
             else:
@@ -97,12 +99,12 @@ def parse_grammar(grammar_file):
     return grammar
 
 
-def choose_expansion(expansions):
+def choose_production(productions):
     '''
-    Choose an expansion from the given weighted list of expansions.
+    Choose an production from the given weighted list of productions.
     '''
-    weights = [expansion[0] for expansion in expansions]
-    strings = [expansion[1] for expansion in expansions]
+    weights = [production[0] for production in productions]
+    strings = [production[1] for production in productions]
     return random.choices(strings, weights)[0]
 
 
@@ -110,7 +112,26 @@ def log_pattern(pattern, depth=0):
     print(f'{"  " * depth}{pattern}', file=sys.stderr)
 
 
-def generate(grammar, pattern, verbose=False, depth=0):
+def evaluate_square(grammar, block, verbose=False, depth=0):
+    if verbose:
+        log_pattern(f'[{block}]', depth + 1)
+
+    # Substitute in a randomly chosen production of this symbol
+    pattern = choose_production(grammar[block])
+    return evaluate_pattern(grammar, pattern, verbose, depth + 1)
+
+
+def evaluate_curly(grammar, block, verbose=False, depth=0):
+    if verbose:
+        log_pattern(f'{{{block}}}', depth + 1)
+
+    # Choose a item from the shortlist to produce
+    shortlist = block.split('|')
+    production = choose_production([parse_rule(rule) for rule in shortlist])
+    return production
+
+
+def evaluate_pattern(grammar, pattern, verbose=False, depth=0):
     '''
     Expand all expressions in the given pattern based on the given grammar and
     return the final expanded string.
@@ -119,46 +140,44 @@ def generate(grammar, pattern, verbose=False, depth=0):
         log_pattern(pattern, depth)
 
     # Expand all shortlists
-    match = RE_SHORTLIST.search(pattern)
+    match = RE_CURLY.search(pattern)
     while match:
-        shortlist = match[1].split('|')
-        expansion = choose_expansion([parse_rule(rule) for rule in shortlist])
+        production = evaluate_curly(grammar, match[1], verbose, depth + 1)
         pattern = (pattern[:match.start()] +
-                   expansion +
+                   production +
                    pattern[match.end():])
 
         if verbose:
             log_pattern(pattern, depth)
-        match = RE_SHORTLIST.search(pattern)
+        match = RE_CURLY.search(pattern)
 
     # Expand all symbols
-    match = RE_SYMBOL.search(pattern)
+    match = RE_SQUARE.search(pattern)
     while match:
-        symbol = match[1].strip()
-        if verbose:
-            log_pattern(match[0], depth + 1)
+        production = evaluate_square(grammar,
+                                     match[1].strip(),
+                                     verbose,
+                                     depth + 1)
 
-        # Substitute in a randomly chosen expansion of this symbol
-        expansion = choose_expansion(grammar[symbol])
         pattern = (pattern[:match.start()] +
-                   generate(grammar, expansion, verbose, depth + 1) +
+                   production +
                    pattern[match.end():])
 
         if verbose:
             log_pattern(pattern, depth)
-        match = RE_SYMBOL.search(pattern)
+        match = RE_SQUARE.search(pattern)
 
     return pattern
 
 
-def generate_from_input(grammar, pattern, verbose=False):
+def evaluate_input(grammar, pattern, verbose=False):
     # If a symbol name was given, expand it
     if pattern in grammar:
-        pattern = choose_expansion(grammar[pattern])
-        return generate(grammar, pattern, verbose)
+        pattern = choose_production(grammar[pattern])
+        return evaluate_pattern(grammar, pattern, verbose)
 
     # Otherwise, interpret the input as a pattern
-    return generate(grammar, pattern, verbose)
+    return evaluate_pattern(grammar, pattern, verbose)
 
 
 def main():
@@ -190,13 +209,13 @@ def main():
 
     # If a pattern was given, generate it and exit
     if args.pattern:
-        print(generate_from_input(grammar, args.pattern, args.verbose))
+        print(evaluate_input(grammar, args.pattern, args.verbose))
         return 0
 
     # Otherwise, read standard input
     try:
         for line in sys.stdin:
-            print(generate_from_input(grammar, line.strip(), args.verbose))
+            print(evaluate_input(grammar, line.strip(), args.verbose))
     except KeyboardInterrupt:
         # Quietly handle SIGINT, like cat does
         print()
