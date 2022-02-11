@@ -34,6 +34,14 @@ RE_COMMENT = re.compile(r'\s*#.*')
 # e.g. 10-20
 RE_RANGE = re.compile(r'\s*([+-]?\d+)\s*-\s*([+-]?\d+)\s*')
 
+# Matches variable definitions (variable name followed by equals and the value)
+# e.g. _0varName= [symbol] pattern [2-5]
+RE_VARIABLE_SET = re.compile(r'([a-zA-Z0-9_]+)\s*=\s*(.+)')
+
+# Matches variable accesses (variable name preceded by $)
+# e.g. $_0varName
+RE_VARIABLE_GET = re.compile(r'\$([a-zA-z0-9_]+)')
+
 BLOCK_START = '['
 BLOCK_END = ']'
 
@@ -99,6 +107,7 @@ class MayhapGenerator:
     def __init__(self, grammar, verbose=False):
         self.grammar = grammar
         self.verbose = verbose
+        self.variables = {}
 
     def log_pattern(self, pattern, depth=0):
         '''
@@ -130,6 +139,21 @@ class MayhapGenerator:
             choice = str(random.choice(range(lower, upper + 1)))
             self.log_pattern(choice, depth)
             return choice
+
+        match = RE_VARIABLE_GET.match(block)
+        if match:
+            variable = match[1]
+            value = self.variables[variable]
+            self.log_pattern(value, depth)
+            return value
+
+        match = RE_VARIABLE_SET.match(block)
+        if match:
+            variable = match[1]
+            value_pattern = match[2]
+            value_production = self.evaluate_pattern(value_pattern, depth)
+            self.variables[variable] = value_production
+            return value_production
 
         # Substitute in a randomly chosen production of this symbol
         symbol = block

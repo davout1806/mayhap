@@ -1,9 +1,5 @@
 # TODO
 
-- Variables:
-	- Declare: `[n = name]`
-	- Access: `[$n]`
-	- Limit variable names to lowercase letters + underscores
 - Unique choices:
 	- Pattern-local unique choice: `[symbol?]`
 	- Globally unique choice: `[symbol??]`
