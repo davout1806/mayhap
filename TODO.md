@@ -1,0 +1,28 @@
+# TODO
+
+- Anonymous symbols: `[small|medium|large]`
+- Ranges:
+	- Basic: `[0-9]`
+	- Custom step size: `[1000-9000+1000]` (step size of 1000)
+- Variables:
+	- Declare: `[n = name]`
+	- Access: `[$n]`
+	- Limit variable names to lowercase letters + underscores
+- Unique choices:
+	- Pattern-local unique choice: `[symbol?]`
+	- Globally unique choice: `[symbol??]`
+- Multiple selection:
+	- No spacing: `[3-5 * letter]`
+	- List ("a, b, and c"): `[3-5 *& word]`
+	- Custom separator: `[3-5 * '/' & number]` for a `/` separator
+- Context-sensitive inflections:
+	- Articles: `a(n) [animal]`
+	- Pluralization: `[5-10] item(s)`
+- Case:
+	- Inherit case: `[symbol_name]`
+	- Sentence case: `[Symbol_name]` or `[symbol_name!]`
+	- Title case: `[Symbol_Name]` or `[symbol_name!!]`
+	- Upper case: `[SYMBOL_NAME]` or `[symbol_name!!!]`
+	- Limit symbol names to lowercase letters + underscores
+- Force pluralization: `[thing+]`
+- Import other grammars via preprocessor directives: `@import noun`

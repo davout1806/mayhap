@@ -30,9 +30,9 @@ For detailed usage information, run:
 
 Sample grammar files may be found in the `samples` directory.
 Mayhap grammars follow a syntax similar to those of [Perchance](https://perchance.org/tutorial).
-Mayhap does not support the full range of features in Perchance grammars, but more are planned to be supported soon.
+Mayhap does not support the full range of features in Perchance grammars, nor does it plan to, but more features are planned to be supported soon nonetheless.
 
-Note that Mayhap is not officially related to nor endorsed by Perchance, and merely takes inspiration from its syntax.
+Note that Mayhap is not affiliated with nor endorsed by Perchance, and merely takes inspiration from its syntax.
 
 ## Contributing
 
