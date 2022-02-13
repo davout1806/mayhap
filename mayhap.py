@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from argparse import ArgumentParser, FileType
-import json
 import random
 import re
 import sys
@@ -46,64 +45,98 @@ BLOCK_START = '['
 BLOCK_END = ']'
 
 
-def parse_rule(rule):
-    '''
-    Parses an production rule into a weight and a production string.
-    '''
-    # Look for an explicit weight
-    match = RE_WEIGHT.search(rule)
-    if match:
-        weight = float(match[1].strip())
-        string_end = match.start()
+class Rule:
+    def __init__(self, production, weight):
+        self.production = production
+        self.weight = weight
 
-    # Default to 1 weight otherwise
-    else:
-        weight = 1
-        string_end = len(rule)
+    @staticmethod
+    def parse(rule):
+        '''
+        Parses an production rule into a weight and a production string.
+        '''
+        # Look for an explicit weight
+        match = RE_WEIGHT.search(rule)
+        if match:
+            weight = float(match[1].strip())
+            string_end = match.start()
 
-    production = rule[:string_end]
-    return weight, production
+        # Default to 1 weight otherwise
+        else:
+            weight = 1
+            string_end = len(rule)
 
+        production = rule[:string_end]
+        return Rule(production, weight)
 
-def parse_grammar(grammar_file):
-    '''
-    Parse the grammar in the given file as a dictionary mapping symbols to
-    lists of weighted production rules. Assumes the file is open (as is the
-    case for TextIOWrappers generated from argparse arguments).
-    '''
-    current_symbol = None
-    grammar = {}
-    for line in grammar_file:
-        stripped = line.strip()
-        if stripped:
-            # Ignore comments
-            if RE_COMMENT.match(stripped):
-                continue
+    @staticmethod
+    def choose(rules):
+        '''
+        Choose a production from the given weighted list of rules.
+        '''
+        weights = [rule.weight for rule in rules]
+        rule = random.choices(rules, weights)[0]
+        return rule
 
-            # Indented lines contain production rules
-            if line[0].isspace():
-                rule = stripped
-                weight, production = parse_rule(rule)
-                production = production.strip()
-                grammar[current_symbol].append((weight, production))
+    def __str__(self):
+        return f'"{self.production}" (weight {self.weight})'
 
-            # Unindented lines contain symbols
-            else:
-                current_symbol = stripped
-                grammar[current_symbol] = []
-    return grammar
+    def __repr__(self):
+        return f'Rule(production={self.production}, weight={self.weight})'
 
 
-def choose_production(rules):
-    '''
-    Choose an production from the given weighted list of rules.
-    '''
-    weights = [rule[0] for rule in rules]
-    rule = random.choices(rules, weights)[0]
-    return rule[1]
+class Grammar:
+    def __init__(self, grammar):
+        self.grammar = grammar
+
+    @staticmethod
+    def parse(lines):
+        current_symbol = None
+        grammar = {}
+        for line in lines:
+            stripped = line.strip()
+            if stripped:
+                # Ignore comments
+                if RE_COMMENT.match(stripped):
+                    continue
+
+                # Indented lines contain production rules
+                if line[0].isspace():
+                    rule = Rule.parse(stripped)
+                    rule.production = rule.production.strip()
+                    grammar[current_symbol].append(rule)
+
+                # Unindented lines contain symbols
+                else:
+                    current_symbol = stripped
+                    grammar[current_symbol] = []
+        return Grammar(grammar)
+
+    def produce(self, symbol):
+        '''
+        Choose a production for the given symbol.
+        '''
+        return Rule.choose(self[symbol])
+
+    def __getitem__(self, item):
+        return self.grammar[item]
+
+    def __contains__(self, item):
+        return item in self.grammar
+
+    def __str__(self):
+        string = ''
+        for symbol, rules in self.grammar.items():
+            string += f'"{symbol}":\n'
+            for rule in rules:
+                string += f'\t{rule}\n'
+        return string
+
+    def __repr__(self):
+        return f'Grammar(grammar={self.grammar})'
 
 
-class MayhapGenerator:
+class Generator:
     def __init__(self, grammar, verbose=False):
         self.grammar = grammar
         self.verbose = verbose
@@ -126,9 +159,9 @@ class MayhapGenerator:
         # Choose a item from the shortlist to produce
         shortlist = block.split('|')
         if len(shortlist) > 1:
-            rules = [parse_rule(rule) for rule in shortlist]
-            production = choose_production(rules)
-            return self.evaluate_pattern(production, depth)
+            rules = [Rule.parse(rule) for rule in shortlist]
+            rule = Rule.choose(rules)
+            return self.evaluate_pattern(rule.production, depth)
 
         block = block.strip()
 
@@ -159,9 +192,8 @@ class MayhapGenerator:
 
         # Substitute in a randomly chosen production of this symbol
         symbol = block
-        rules = self.grammar[symbol]
-        production = choose_production(rules)
-        return self.evaluate_pattern(production, depth)
+        rule = self.grammar.produce(symbol)
+        return self.evaluate_pattern(rule.production, depth)
 
     def evaluate_pattern(self, pattern, depth=0):
         '''
@@ -207,8 +239,8 @@ class MayhapGenerator:
         '''
         # If a symbol name was given, expand it
         if pattern in self.grammar:
-            pattern = choose_production(self.grammar[pattern])
-            return self.evaluate_pattern(pattern)
+            rule = self.grammar.produce(pattern)
+            return self.evaluate_pattern(rule.production)
 
         # Otherwise, interpret the input as a pattern
         return self.evaluate_pattern(pattern)
@@ -236,12 +268,11 @@ def main():
                  'stderr, so stdout is still clean')
     args = parser.parse_args()
 
-    grammar = parse_grammar(args.grammar)
+    grammar = Grammar.parse(args.grammar)
     if args.verbose:
-        dump = json.dumps(grammar, indent=4)
-        print(f'Parsed grammar:\n{dump}', file=sys.stderr)
+        print(grammar, file=sys.stderr)
 
-    generator = MayhapGenerator(grammar, args.verbose)
+    generator = Generator(grammar, args.verbose)
 
     # If a pattern was given, generate it and exit
     if args.pattern:
