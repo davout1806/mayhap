@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from argparse import ArgumentParser, FileType
+from copy import deepcopy
 import random
 import re
 import sys
@@ -40,6 +41,10 @@ RE_VARIABLE_SET = re.compile(r'([a-zA-Z0-9_]+)\s*=\s*(.+)')
 # Matches variable accesses (variable name preceded by $)
 # e.g. $_0varName
 RE_VARIABLE_GET = re.compile(r'\$([a-zA-z0-9_]+)')
+
+# Matches mundane symbols (symbol name followed by ?)
+# e.g. symbol?
+RE_MUNDANE = re.compile(r'(.+)\?')
 
 BLOCK_START = '['
 BLOCK_END = ']'
@@ -74,8 +79,9 @@ class Rule:
         '''
         Choose a production from the given weighted list of rules.
         '''
-        weights = [rule.weight for rule in rules]
-        rule = random.choices(rules, weights)[0]
+        rules_tuple = tuple(rules)
+        weights = [rule.weight for rule in rules_tuple]
+        rule = random.choices(rules_tuple, weights)[0]
         return rule
 
     def __str__(self):
@@ -85,55 +91,36 @@ class Rule:
         return f'Rule(production={self.production}, weight={self.weight})'
 
 
-class Grammar:
-    def __init__(self, grammar):
-        self.grammar = grammar
+def parse_grammar(lines):
+    current_symbol = None
+    grammar = {}
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            # Ignore comments
+            if RE_COMMENT.match(stripped):
+                continue
 
-    @staticmethod
-    def parse(lines):
-        current_symbol = None
-        grammar = {}
-        for line in lines:
-            stripped = line.strip()
-            if stripped:
-                # Ignore comments
-                if RE_COMMENT.match(stripped):
-                    continue
+            # Indented lines contain production rules
+            if line[0].isspace():
+                rule = Rule.parse(stripped)
+                rule.production = rule.production.strip()
+                grammar[current_symbol].add(rule)
 
-                # Indented lines contain production rules
-                if line[0].isspace():
-                    rule = Rule.parse(stripped)
-                    rule.production = rule.production.strip()
-                    grammar[current_symbol].append(rule)
+            # Unindented lines contain symbols
+            else:
+                current_symbol = stripped
+                grammar[current_symbol] = set()
+    return grammar
 
-                # Unindented lines contain symbols
-                else:
-                    current_symbol = stripped
-                    grammar[current_symbol] = []
-        return Grammar(grammar)
 
-    def produce(self, symbol):
-        '''
-        Choose a production for the given symbol.
-        '''
-        return Rule.choose(self[symbol])
-
-    def __getitem__(self, item):
-        return self.grammar[item]
-
-    def __contains__(self, item):
-        return item in self.grammar
-
-    def __str__(self):
-        string = ''
-        for symbol, rules in self.grammar.items():
-            string += f'"{symbol}":\n'
-            for rule in rules:
-                string += f'\t{rule}\n'
-        return string
-
-    def __repr__(self):
-        return f'Grammar(grammar={self.grammar})'
+def grammar_to_string(grammar):
+    string = ''
+    for symbol, rules in grammar.items():
+        string += f'"{symbol}":\n'
+        for rule in rules:
+            string += f'\t{rule}\n'
+    return string
 
 
 class Generator:
@@ -141,6 +128,22 @@ class Generator:
         self.grammar = grammar
         self.verbose = verbose
         self.variables = {}
+        self.unused = deepcopy(self.grammar)
+
+    def reset(self):
+        self.variables = {}
+        self.unused = deepcopy(self.grammar)
+
+    def produce(self, symbol, unique=True):
+        if unique and len(self.unused[symbol]) > 0:
+            rule = Rule.choose(self.unused[symbol])
+            self.unused[symbol].remove(rule)
+            return rule
+
+        rule = Rule.choose(self.grammar[symbol])
+        if rule in self.unused[symbol]:
+            self.unused[symbol].remove(rule)
+        return rule
 
     def log_pattern(self, pattern, depth=0):
         '''
@@ -190,9 +193,12 @@ class Generator:
             self.variables[variable] = value_production
             return value_production
 
+        match = RE_MUNDANE.match(block)
+        unique = not match
+        symbol = match[1] if match else block
+
         # Substitute in a randomly chosen production of this symbol
-        symbol = block
-        rule = self.grammar.produce(symbol)
+        rule = self.produce(symbol, unique)
         return self.evaluate_pattern(rule.production, depth)
 
     def evaluate_pattern(self, pattern, depth=0):
@@ -239,7 +245,7 @@ class Generator:
         '''
         # If a symbol name was given, expand it
         if pattern in self.grammar:
-            rule = self.grammar.produce(pattern)
+            rule = self.produce(pattern)
             return self.evaluate_pattern(rule.production)
 
         # Otherwise, interpret the input as a pattern
@@ -268,9 +274,9 @@ def main():
                  'stderr, so stdout is still clean')
     args = parser.parse_args()
 
-    grammar = Grammar.parse(args.grammar)
+    grammar = parse_grammar(args.grammar)
     if args.verbose:
-        print(grammar, file=sys.stderr)
+        print(grammar_to_string(grammar), file=sys.stderr)
 
     generator = Generator(grammar, args.verbose)
 

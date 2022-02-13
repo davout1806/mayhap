@@ -1,8 +1,5 @@
 # TODO
 
-- Unique choices:
-	- Pattern-local unique choice: `[symbol?]`
-	- Globally unique choice: `[symbol??]`
 - Multiple selection:
 	- No spacing: `[3 * letter]`
 	- List ("a, b, and c"): `[3 *& word]`
