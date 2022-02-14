@@ -17,12 +17,19 @@
 
 from argparse import ArgumentParser, FileType
 from copy import deepcopy
+from os import chdir
+from os.path import dirname, isfile
 import random
 import re
 import sys
 
 
-# Matches a number preceded by a caret at the end of the line
+# Matches the name of a generator to import when parsing a grammar
+# e.g. @generator_name
+RE_IMPORT = re.compile(r'^@(.+)$')
+
+# Matches a weight appended to a rule (a number preceded by a caret at the end
+# of the line)
 # e.g. ^4.25
 RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)$')
 
@@ -99,6 +106,16 @@ def parse_grammar(lines):
         if stripped:
             # Ignore comments
             if RE_COMMENT.match(stripped):
+                continue
+
+            match = RE_IMPORT.match(stripped)
+            if match:
+                import_file_name = match[1]
+                # Default to .mh extension if not specified
+                if not isfile(import_file_name):
+                    import_file_name = f'{match[1]}.mh'
+                with open(import_file_name) as import_file:
+                    grammar |= parse_grammar(import_file)
                 continue
 
             # Indented lines contain production rules
@@ -274,6 +291,9 @@ def main():
                  'stderr, so stdout is still clean')
     args = parser.parse_args()
 
+    # Change working directory to directory containing the given grammar
+    # This allows for import paths relative to the given grammar
+    chdir(dirname(args.grammar.name))
     grammar = parse_grammar(args.grammar)
     if args.verbose:
         print(grammar_to_string(grammar), file=sys.stderr)
