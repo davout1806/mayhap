@@ -1,18 +1,28 @@
 # TODO
 
-- Multiple selection:
-	- No spacing: `[3 * letter]`
-	- List ("a, b, and c"): `[3 *& word]`
-	- Custom separator: `[3 * '/' & number]` for a `/` separator
-- Context-sensitive inflections:
-	- Articles: `a[n] [animal]`
-	- Pluralization: `[5-10] item[s]`
+- Context-sensitive articles: `a[n] [animal]`
+- Pluralization:
+	- Conditional: `[x=1-5] [item+$x]`
+	- Unconditional: `[item+]`
 - Case:
-	- Inherit case: `[symbol_name]`
-	- Sentence case: `[Symbol_name]` or `[symbol_name!]`
-	- Title case: `[Symbol_Name]` or `[symbol_name!!]`
-	- Upper case: `[SYMBOL_NAME]` or `[symbol_name!!!]`
-	- Limit symbol names to lowercase letters + underscores
-- Force pluralization: `[thing+]`
-- Parameterized rules: `greet(name)`, `Hi, $name!`, `[greet('Bob')]`
-- Allow escaping blocks
+	- Preserve case
+	- Lower case
+	- Sentence case
+	- Title case
+	- Upper case
+- Patterns vs. blocks:
+	- Block content: all text in blocks (by default)
+	- Pattern: double quotes
+	- Literal: single quotes
+- Parameterized rules:
+	- Symbol definition: `greet(name)`
+	- Rule definition: `Hi, [$name]!`
+	- Invocation: `[greet('Bob')]`
+- Escape characters: `\[not a block\]`
+- Interactive mode:
+	- Input prompts
+	- Nicer formatting
+	- Reuse the last input when a blank line is entered
+- Notify about syntax errors nicely rather than throwing raw Python exceptions
+- Flag to control whether unused variables are reset between lines
+- Precompute rules to avoid running regex matches for every query
