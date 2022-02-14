@@ -1,15 +1,15 @@
 # TODO
 
-- Context-sensitive articles: `a[n] [animal]`
+- Context-sensitive articles: `[@ animal]`
 - Pluralization:
 	- Conditional: `[x=1-5] [item+$x]`
 	- Unconditional: `[item+]`
 - Case:
 	- Preserve case
-	- Lower case
-	- Sentence case
-	- Title case
-	- Upper case
+	- Lower case: `[symbol.lower]`
+	- Sentence case: `[symbol.sentence]`
+	- Title case: `[symbol.title]`
+	- Upper case: `[symbol.upper]`
 - Patterns vs. blocks:
 	- Block content: all text in blocks (by default)
 	- Pattern: double quotes
@@ -18,6 +18,7 @@
 	- Symbol definition: `greet(name)`
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
+- Strip non-escaped inline comments
 - Escape characters: `\[not a block\]`
 - Interactive mode:
 	- Input prompts

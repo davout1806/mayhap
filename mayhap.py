@@ -26,7 +26,8 @@ import sys
 
 # Matches the name of a generator to import when parsing a grammar
 # e.g. @generator_name
-RE_IMPORT = re.compile(r'^@(.+)$')
+# e.g. @/home/username/generator_name.mh
+RE_IMPORT = re.compile(r'@(.+)')
 
 # Matches a weight appended to a rule (a number preceded by a caret at the end
 # of the line)
@@ -152,7 +153,13 @@ class Generator:
         self.unused = deepcopy(self.grammar)
 
     def produce(self, symbol, unique=True):
-        if unique and len(self.unused[symbol]) > 0:
+        if unique:
+            # If all symbols have been used, old symbols must be reused
+            # Recreate and draw from the unused list again to reduce duplicates
+            # TODO consider throwing an error if symbols must be reused
+            if len(self.unused[symbol]) == 0:
+                self.unused[symbol] = self.grammar[symbol].copy()
+
             rule = Rule.choose(self.unused[symbol])
             self.unused[symbol].remove(rule)
             return rule
@@ -162,19 +169,21 @@ class Generator:
             self.unused[symbol].remove(rule)
         return rule
 
-    def log_pattern(self, pattern, depth=0):
+    def log(self, string, block, depth=0):
         '''
         Log the given pattern to standard error, indented by its recursion
         depth for readability.
         '''
         if self.verbose:
-            print(f'{"  " * depth}{pattern}', file=sys.stderr)
+            start = '[' if block else '"'
+            end = ']' if block else '"'
+            print(f'{"  " * depth}{start}{string}{end}', file=sys.stderr)
 
     def evaluate_block(self, block, depth=0):
         '''
         Expand the given block and return the final expanded string.
         '''
-        self.log_pattern(f'[{block}]', depth)
+        self.log(block, block=True, depth=depth)
 
         # Choose a item from the shortlist to produce
         shortlist = block.split('|')
@@ -192,14 +201,14 @@ class Generator:
             lower = min(bound1, bound2)
             upper = max(bound1, bound2)
             choice = str(random.choice(range(lower, upper + 1)))
-            self.log_pattern(choice, depth)
+            self.log(choice, block=False, depth=depth)
             return choice
 
         match = RE_VARIABLE_GET.match(block)
         if match:
             variable = match[1]
             value = self.variables[variable]
-            self.log_pattern(value, depth)
+            self.log(value, block=False, depth=depth)
             return value
 
         match = RE_VARIABLE_SET.match(block)
@@ -223,7 +232,7 @@ class Generator:
         Expand all blocks in the given pattern and return the final expanded
         string.
         '''
-        self.log_pattern(pattern, depth)
+        self.log(pattern, block=False, depth=depth)
 
         stack = []
         i = 0
@@ -243,7 +252,7 @@ class Generator:
                            production +
                            pattern[end + 1:])
 
-                self.log_pattern(pattern, depth)
+                self.log(pattern, block=False, depth=depth)
 
                 # Assume the production is fully resolved
                 # Jump to the next unprocessed index
