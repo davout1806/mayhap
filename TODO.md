@@ -1,23 +1,41 @@
 # TODO
 
-- Context-sensitive articles: `[@ animal]`
+- Unique/mundane symbols:
+	- `[symbol.mundane]`
+- Context-sensitive articles:
+	- `a(n) [animal]`
+	- `[animal.a]`
 - Pluralization:
-	- Conditional: `[x=1-5] [item+$x]`
-	- Unconditional: `[item+]`
+	- Conditional:
+		- `[x=1-5] [item.s($x)]`
+		- `[1-5] [item](s)`
+	- Unconditional:
+		- `[item](s)` (no prior numbers in expansion)
+		- `[item.s]`
 - Case:
 	- Preserve case
-	- Lower case: `[symbol.lower]`
-	- Sentence case: `[symbol.sentence]`
-	- Title case: `[symbol.title]`
-	- Upper case: `[symbol.upper]`
+		- `[sYmBoL nAmE]`
+	- Lower case:
+		- `[symbol name]`
+		- `[sYmBoL nAmE.lower]`
+	- Sentence case:
+		- `[Symbol name]`
+		- `[sYmBoL nAmE.sentence]`
+	- Title case:
+		- `[Symbol Name]`
+		- `[sYmBoL nAmE.title]`
+	- Upper case:
+		- `[SYMBOL NAME]`
+		- `[sYmBoL nAmE.upper]`
 - Patterns vs. blocks:
-	- Block content: all text in blocks (by default)
+	- Special: all text in blocks (by default)
 	- Pattern: double quotes
 	- Literal: single quotes
 - Parameterized rules:
 	- Symbol definition: `greet(name)`
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
+- Markov chains: `[name.markov]`
 - Strip non-escaped inline comments
 - Escape characters: `\[not a block\]`
 - Interactive mode:
