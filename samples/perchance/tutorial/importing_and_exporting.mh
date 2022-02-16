@@ -1,0 +1,5 @@
+@animal_lists
+
+sentence
+	That's definitely not a [mammal]. It's a [reptile]. # TODO {a}
+	A [insect] is much smaller than a [mammal]. # TODO {a}

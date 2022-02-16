@@ -1,0 +1,40 @@
+description
+	It's a [adjective] dish with [type] [main].
+	The [adjective] [main] is paired with a [size] serving of [condiment]-covered [side].
+	A [main] with a bit of [condiment] and some [adjective] [side] on the side.
+
+adjective
+	vegan
+	Indonesian
+	Italian
+	delicious
+
+main
+	risotto
+	pie
+	stir-fry
+	curry
+
+side
+	bowl of rice
+	salad
+	fries
+	fried mushrooms
+	pumpkin soup
+	
+type
+	a [size] serving of
+	well-cooked
+	unusually fresh
+	roasted
+
+size
+	small
+	large
+	tiny
+
+condiment
+	pepper ^2
+	salt
+	chilli flakes ^0.1
+	oregano

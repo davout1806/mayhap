@@ -1,0 +1,13 @@
+name
+	Addison
+	Alex
+	Alexis
+  
+lastName
+	Smith
+	Johnson
+	Williams
+
+sentence
+	Her name was [n = [name]]. [$n] [lastName], if I recall correctly. # TODO titleCase
+	I think her name was [n = [name]]? [$n] [l = [lastName]]? Wait, no, it was [n = [name]]. Yeah, that's right, [$n] [$l]. # TODO titleCase

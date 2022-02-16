@@ -1,0 +1,16 @@
+animal
+	pig
+	cow
+	zebra
+
+adjective
+	sneaky
+	happy
+	furry
+
+sentence
+	That [animal] is very [adjective].
+	I befriended a very [adjective] [animal] yesterday.
+
+paragraph
+	[sentence] [sentence] [sentence]
