@@ -1,0 +1,54 @@
+sentence
+	[color] [animal](s) are [often] [mood]. # TODO .sentence, {s}
+	A(n) [animal] is [often] [mood], unless it is a(n) [color] one. # TODO {a}
+
+often
+	rarely
+	never
+	often
+	almost always
+	always
+	sometimes
+
+color
+	orange
+	blue
+	white
+	black
+	grey
+	purple
+	indigo
+	turquoise
+
+animal
+	unicorn
+	raven
+	sparrow
+	scorpion
+	coyote
+	eagle
+	owl
+	lizard
+	zebra
+	duck
+	kitten
+
+mood
+	vexed
+	indignant
+	impassioned
+	wistful
+	astute
+	courteous
+
+natureNoun
+	ocean
+	mountain
+	forest
+	cloud
+	river
+	tree
+	sky
+	earth
+	void
+	desert
