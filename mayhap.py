@@ -76,7 +76,7 @@ class Rule:
 
         # Default to 1 weight otherwise
         else:
-            weight = 1
+            weight = 1.0
             string_end = len(rule)
 
         production = rule[:string_end]
