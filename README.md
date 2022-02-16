@@ -4,9 +4,15 @@ A grammar-based random text generator, inspired by [Perchance](https://perchance
 
 ## Setup
 
-Mayhap depends only on Python 3.
+Dependencies:
 
-To install Mayhap, simply clone the repository.
+- Python 3
+- [inflect](https://github.com/jaraco/inflect)
+
+To install Mayhap, clone the repository and install the required dependencies by running:
+```sh
+pip install -r requirements.txt
+```
 
 ## Usage
 

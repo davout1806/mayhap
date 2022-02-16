@@ -2,6 +2,6 @@ flower
 	rose
 	lily
 	tulip
-	
+
 sentence
-  Oh you've got me a [f = [flower]]! Thank you, I love this [$f]. # TODO pluralForm
+  Oh you've got me a [f = [flower]]! Thank you, I love [$f](s). # TODO pluralForm

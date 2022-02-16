@@ -23,6 +23,8 @@ import random
 import re
 import sys
 
+import inflect
+
 
 # Matches the name of a generator to import when parsing a grammar
 # e.g. @generator_name
@@ -54,6 +56,14 @@ RE_VARIABLE_GET = re.compile(r'\$(.+?)')
 # e.g. .mundane
 RE_MODIFIER = re.compile(r'\.([^\.]+)')
 
+# Matches dynamic indefinite articles
+# e.g. a(n)
+RE_A = re.compile(r'(a)\((n)\)', re.IGNORECASE)
+
+# Matches dynamic pluralization
+# e.g. (s)
+RE_S = re.compile(r'\((s)\)', re.IGNORECASE)
+
 # The start and end of a block
 # Must parse manually, as regular expressions cannot easily parse nested groups
 BLOCK_START = '['
@@ -61,6 +71,8 @@ BLOCK_END = ']'
 
 # Do not require a unique production to be chosen from the given symbol
 MOD_MUNDANE = set(['mundane'])
+
+INFLECT_ENGINE = inflect.engine()
 
 
 class Rule:
@@ -163,6 +175,83 @@ def parse_modifiers(block):
 
 def has_modifier(modifier, modifiers):
     return not modifier.isdisjoint(modifiers)
+
+
+def resolve_indefinite_articles(pattern):
+    output = ''
+    last_match = 0
+    for match in RE_A.finditer(pattern):
+        output += pattern[last_match:match.start()]
+
+        # Find the next word in the pattern
+        next_word = ''
+        for character in pattern[match.end() + 1:]:
+            if not character.isalpha():
+                break
+            next_word += character
+
+        if next_word:
+            article = INFLECT_ENGINE.a(next_word).split(' ')[0]
+        else:
+            article = 'a'
+
+        if match[1].isupper():
+            article = article[0].upper() + article[1:]
+        if match[2].isupper():
+            article = article[0] + article[1:].upper()
+
+        output += article
+
+        last_match = match.end()
+    output += pattern[last_match:]
+    return output
+
+
+def resolve_plurals(pattern):
+    output = ''
+    last_match = 0
+    for match in RE_S.finditer(pattern):
+        # Find the previous number
+        previous_word = ''
+        previous_number = ''
+        building_word = True
+        for offset, character in enumerate(pattern[match.start() - 1::-1]):
+            if building_word:
+                if character.isalpha():
+                    previous_word = character + previous_word
+                    continue
+                previous_word_start = match.start() - offset
+                building_word = False
+            if (character.isdigit() or
+                    (previous_number and
+                        character in '-.' and
+                        previous_number[0] not in '-.')):
+                previous_number = character + previous_number
+            elif previous_number:
+                break
+
+        if previous_word:
+            output += pattern[last_match:previous_word_start]
+
+            if previous_number:
+                if '.' in previous_number:
+                    previous_number = float(previous_number)
+                else:
+                    previous_number = int(previous_number)
+
+                previous_word = INFLECT_ENGINE.plural(previous_word,
+                                                      previous_number)
+            else:
+                previous_word = INFLECT_ENGINE.plural(previous_word)
+
+            output += previous_word
+        else:
+            output += pattern[last_match:match.start()]
+            output += match[1]
+
+        last_match = match.end()
+    output += pattern[last_match:]
+    return output
 
 
 class Generator:
@@ -284,6 +373,8 @@ class Generator:
 
             i += 1
 
+        pattern = resolve_indefinite_articles(pattern)
+        pattern = resolve_plurals(pattern)
         return pattern
 
     def evaluate_input(self, pattern):

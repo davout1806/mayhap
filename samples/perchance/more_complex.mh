@@ -34,7 +34,7 @@ sadObservation
 	Looks like you're running out of common noun. # TODO @common_noun.mh
 	You've just eaten your last vegetable. # TODO @vegetable.mh
 	You start to wonder why you're even out here.
-	Maybe they're right; this is no place for an unusual animal. ^2 # TODO {a}, @unusual_animal.mh
+	Maybe they're right; this is no place for a(n) unusual animal. ^2 # TODO @unusual_animal.mh
 	The world just seems too adjective. # TODO @adjective.mh
 	This whole situation reminds you so much of [PROJECT|OPERATION] CODENAME. # TODO @codename.mh, .upperCase
 
@@ -43,5 +43,5 @@ decision
 	You can't wait any longer. It's time to [doAThing].
 
 doAThing
-	verb a concrete noun # TODO {a}, @verb.mh, @concrete_noun.mh
+	verb a(n) concrete noun # TODO @verb.mh, @concrete_noun.mh
 	make a text generator ^0.05

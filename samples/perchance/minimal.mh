@@ -2,10 +2,10 @@
 output
   [This|That] [animal] is so [adjective]!
   I wish I could [verb] that [animal].
-  Aren't [animal]s just so [adjective]? # TODO .pluralForm
-  There must be at least [1-10] [animal](s) [location]! # TODO {s}
+  Aren't [animal](s) just so [adjective]? # TODO .pluralForm
+  There must be at least [1-10] [animal](s) [location]!
   THE [animal]! It's eating the common noun! # TODO .upperCase, @common_noun.mh
-  A(n) [animal] is a bit like a(n) common noun. # TODO {a}, @common_noun.mh
+  A(n) [animal] is a bit like a(n) common noun. # TODO @common_noun.mh
 
 animal
   pig
@@ -15,7 +15,7 @@ animal
   crayfish
   jellyfish^0.5
   worm^2
-	
+
 adjective
   small
   big
@@ -24,12 +24,12 @@ adjective
   unusual
   helpful
   mean
-	
+
 verb
   pat
   befriend
   help
-	
+
 location
   on [the|this|that] island
   in [the|this|that] valley
