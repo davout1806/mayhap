@@ -46,16 +46,21 @@ RE_RANGE = re.compile(r'([+-]?\d+)\s*-\s*([+-]?\d+)')
 # e.g. _0varName= [symbol] pattern [2-5]
 RE_VARIABLE_SET = re.compile(r'(.+?)\s*=\s*(.+)')
 
-# Matches variable accesses (variable name preceded by $)
+# Matches variable accesses (dollar sign followed by a variable name)
 # e.g. $_0varName
 RE_VARIABLE_GET = re.compile(r'\$(.+?)')
 
-# Matches mundane symbols (symbol name followed by ?)
-# e.g. symbol?
-RE_MUNDANE = re.compile(r'(.+)\?')
+# Matches modifiers (period followed by a modifier type)
+# e.g. .mundane
+RE_MODIFIER = re.compile(r'\.([^\.]+)')
 
+# The start and end of a block
+# Must parse manually, as regular expressions cannot easily parse nested groups
 BLOCK_START = '['
 BLOCK_END = ']'
+
+# Do not require a unique production to be chosen from the given symbol
+MOD_MUNDANE = set(['mundane'])
 
 
 class Rule:
@@ -144,6 +149,22 @@ def grammar_to_string(grammar):
     return string
 
 
+def parse_modifiers(block):
+    modifiers = set()
+    for match in RE_MODIFIER.finditer(block):
+        # Slice block to get the symbol if this is the first match
+        if not modifiers:
+            symbol = block[:match.start()]
+        modifiers.add(match[1])
+    if not modifiers:
+        symbol = block
+    return symbol, modifiers
+
+
+def has_modifier(modifier, modifiers):
+    return not modifier.isdisjoint(modifiers)
+
+
 class Generator:
     def __init__(self, grammar, verbose=False):
         self.grammar = grammar
@@ -222,9 +243,8 @@ class Generator:
             self.variables[variable] = value_production
             return value_production
 
-        match = RE_MUNDANE.match(block)
-        unique = not match
-        symbol = match[1] if match else block
+        symbol, modifiers = parse_modifiers(block)
+        unique = not has_modifier(MOD_MUNDANE, modifiers)
 
         # Substitute in a randomly chosen production of this symbol
         rule = self.produce(symbol, unique)
