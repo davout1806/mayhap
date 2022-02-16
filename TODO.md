@@ -1,5 +1,8 @@
 # TODO
 
+- Ordinals:
+	- `[1-10](th)`
+	- `[1-10.ordinal]`?
 - Unique/mundane symbols:
 	- `[symbol.mundane]`
 - Context-sensitive articles:
