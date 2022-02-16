@@ -39,7 +39,6 @@
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
 - Markov chains: `[name.markov]`
-- Strip non-escaped inline comments
 - Escape characters: `\[not a block\]`
 - Interactive mode:
 	- Input prompts

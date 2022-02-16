@@ -36,7 +36,7 @@ RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)$')
 
 # Matches comments (lines starting with a hash)
 # e.g. \t# hello world
-RE_COMMENT = re.compile(r'\s*#.*')
+RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 
 # Matches integer ranges separated by a hyphen
 # e.g. 10-20
@@ -44,11 +44,11 @@ RE_RANGE = re.compile(r'([+-]?\d+)\s*-\s*([+-]?\d+)')
 
 # Matches variable definitions (variable name followed by equals and the value)
 # e.g. _0varName= [symbol] pattern [2-5]
-RE_VARIABLE_SET = re.compile(r'([a-zA-Z0-9_]+)\s*=\s*(.+)')
+RE_VARIABLE_SET = re.compile(r'(.+?)\s*=\s*(.+)')
 
 # Matches variable accesses (variable name preceded by $)
 # e.g. $_0varName
-RE_VARIABLE_GET = re.compile(r'\$([a-zA-z0-9_]+)')
+RE_VARIABLE_GET = re.compile(r'\$(.+?)')
 
 # Matches mundane symbols (symbol name followed by ?)
 # e.g. symbol?
@@ -105,9 +105,12 @@ def parse_grammar(lines):
     for line in lines:
         stripped = line.strip()
         if stripped:
-            # Ignore comments
-            if RE_COMMENT.match(stripped):
-                continue
+            # Strip trailing comments
+            match = RE_COMMENT.search(stripped)
+            if match:
+                stripped = stripped[:match.start(2)].strip()
+                if not stripped:
+                    continue
 
             match = RE_IMPORT.match(stripped)
             if match:
