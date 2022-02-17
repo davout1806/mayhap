@@ -3,13 +3,9 @@
 - Ordinals:
 	- `[1-10](th)`
 	- `[1-10.ordinal]`?
-- Context-sensitive articles:
-	- `[animal.a]`
 - Pluralization:
 	- Conditional:
 		- `[x=1-5] [item.s($x)]`
-	- Unconditional:
-		- `[item.s]`
 - Case:
 	- Preserve case
 		- `[sYmBoL nAmE]`
@@ -35,6 +31,7 @@
 	- Invocation: `[greet('Bob')]`
 - Markov chains: `[name.markov]`
 - Escape characters: `\[not a block\]`
+	- Strip unescaped backslashes as a post-processing pass
 - Interactive mode:
 	- Input prompts
 	- Nicer formatting
@@ -42,3 +39,4 @@
 - Notify about syntax errors nicely rather than throwing raw Python exceptions
 - Flag to control whether unused variables are reset between lines
 - Precompute rules to avoid running regex matches for every query
+- Make basic guesses at indefinite articles and plurals if inflect is not installed

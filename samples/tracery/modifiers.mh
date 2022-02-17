@@ -1,5 +1,5 @@
 sentence
-	[color] [animal](s) are [often] [mood]. # TODO .sentence, {s}
+	[color] [animal.s] are [often] [mood]. # TODO .sentence
 	A(n) [animal] is [often] [mood], unless it is a(n) [color] one.
 
 often

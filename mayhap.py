@@ -42,15 +42,15 @@ RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 
 # Matches integer ranges separated by a hyphen
 # e.g. 10-20
-RE_RANGE = re.compile(r'([+-]?\d+)\s*-\s*([+-]?\d+)')
+RE_RANGE = re.compile(r'([+-]?\d+)-([+-]?\d+)')
 
 # Matches variable definitions (variable name followed by equals and the value)
 # e.g. _0varName= [symbol] pattern [2-5]
-RE_VARIABLE_SET = re.compile(r'(.+?)\s*=\s*(.+)')
+RE_VARIABLE_SET = re.compile(r'([^\.]+)=([^\.]+)')
 
 # Matches variable accesses (dollar sign followed by a variable name)
 # e.g. $_0varName
-RE_VARIABLE_GET = re.compile(r'\$(.+?)')
+RE_VARIABLE_GET = re.compile(r'\$([^\.]+)')
 
 # Matches modifiers (period followed by a modifier type)
 # e.g. .mundane
@@ -71,6 +71,12 @@ BLOCK_END = ']'
 
 # Do not require a unique production to be chosen from the given symbol
 MOD_MUNDANE = set(['mundane'])
+
+# Add a context-sensitive indefinite article before this symbol
+MOD_A = set(['a'])
+
+# Pluralize this symbol
+MOD_S = set(['s', 'plural', 'pluralForm'])
 
 INFLECT_ENGINE = inflect.engine()
 
@@ -177,6 +183,10 @@ def has_modifier(modifier, modifiers):
     return not modifier.isdisjoint(modifiers)
 
 
+def get_article(word):
+    return INFLECT_ENGINE.a(word).split(' ')[0]
+
+
 def resolve_indefinite_articles(pattern):
     output = ''
     last_match = 0
@@ -191,7 +201,7 @@ def resolve_indefinite_articles(pattern):
             next_word += character
 
         if next_word:
-            article = INFLECT_ENGINE.a(next_word).split(' ')[0]
+            article = get_article(next_word)
         else:
             article = 'a'
 
@@ -205,6 +215,12 @@ def resolve_indefinite_articles(pattern):
         last_match = match.end()
     output += pattern[last_match:]
     return output
+
+
+def get_plural(word, number=None):
+    if number is not None:
+        return INFLECT_ENGINE.plural(word, number)
+    return INFLECT_ENGINE.plural(word)
 
 
 def resolve_plurals(pattern):
@@ -239,10 +255,9 @@ def resolve_plurals(pattern):
                 else:
                     previous_number = int(previous_number)
 
-                previous_word = INFLECT_ENGINE.plural(previous_word,
-                                                      previous_number)
+                previous_word = get_plural(previous_word, previous_number)
             else:
-                previous_word = INFLECT_ENGINE.plural(previous_word)
+                previous_word = get_plural(previous_word)
 
             output += previous_word
         else:
@@ -317,27 +332,33 @@ class Generator:
             self.log(choice, block=False, depth=depth)
             return choice
 
-        match = RE_VARIABLE_GET.match(block)
-        if match:
-            variable = match[1]
-            value = self.variables[variable]
-            self.log(value, block=False, depth=depth)
-            return value
-
         match = RE_VARIABLE_SET.match(block)
         if match:
-            variable = match[1]
-            value_pattern = match[2]
+            variable = match[1].strip()
+            value_pattern = match[2].strip()
             value_production = self.evaluate_pattern(value_pattern, depth)
             self.variables[variable] = value_production
             return value_production
 
         symbol, modifiers = parse_modifiers(block)
-        unique = not has_modifier(MOD_MUNDANE, modifiers)
 
-        # Substitute in a randomly chosen production of this symbol
-        rule = self.produce(symbol, unique)
-        return self.evaluate_pattern(rule.production, depth)
+        match = RE_VARIABLE_GET.match(block)
+        if match:
+            variable = match[1].strip()
+            pattern = self.variables[variable]
+        else:
+            # Substitute in a randomly chosen production of this symbol
+            unique = not has_modifier(MOD_MUNDANE, modifiers)
+            rule = self.produce(symbol, unique)
+            pattern = self.evaluate_pattern(rule.production, depth)
+
+        if has_modifier(MOD_S, modifiers):
+            pattern = get_plural(pattern)
+
+        if has_modifier(MOD_A, modifiers):
+            pattern = get_article(pattern) + pattern
+
+        return pattern
 
     def evaluate_pattern(self, pattern, depth=0):
         '''
