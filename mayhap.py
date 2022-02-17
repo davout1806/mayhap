@@ -78,18 +78,17 @@ MOD_A = set(['a'])
 # Pluralize this symbol
 MOD_S = set(['s', 'plural', 'pluralForm'])
 
+# Capitalize the first letter of the first word
+MOD_CAPITALIZE = set(['capitalize'])
+
 # Convert to lowercase
 MOD_LOWER = set(['lower', 'lowerCase'])
 
-# Convert to sentence case (capitalize the first letter of the first word)
-# TODO capitalize the first word of every sentence
-MOD_SENTENCE = set(['sentence', 'sentenceCase'])
+# Convert to upper case
+MOD_UPPER = set(['upper', 'upperCase'])
 
 # Convert to title case (capitalize the first letter of each word)
 MOD_TITLE = set(['title', 'titleCase'])
-
-# Convert to upper case
-MOD_UPPER = set(['upper', 'upperCase'])
 
 INFLECT_ENGINE = inflect.engine()
 
@@ -370,14 +369,14 @@ class Generator:
                 pattern = get_plural(pattern)
             elif modifier in MOD_A:
                 pattern = get_article(pattern) + pattern
+            elif modifier in MOD_CAPITALIZE:
+                pattern = pattern.capitalize()
             elif modifier in MOD_LOWER:
                 pattern = pattern.lower()
-            elif modifier in MOD_SENTENCE:
-                pattern = pattern.capitalize()
-            elif modifier in MOD_TITLE:
-                pattern = pattern.title()
             elif modifier in MOD_UPPER:
                 pattern = pattern.upper()
+            elif modifier in MOD_TITLE:
+                pattern = pattern.title()
 
         return pattern
 

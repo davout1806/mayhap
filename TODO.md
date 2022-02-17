@@ -5,14 +5,14 @@
 	- `[1-10.ordinal]`?
 - Conditional pluralization: `[x=1-5] [item.s($x)]`
 - Case:
-	- Lower case: `[symbol name]`
-	- Sentence case: `[Symbol name]`
-	- Title case: `[Symbol Name]`
-	- Upper case: `[SYMBOL NAME]`
+	- Lower case: `[symbol]`
+	- Title case: `[Symbol]`
+	- Upper case: `[SYMBOL]`
 - Patterns vs. blocks:
 	- Special: all text in blocks (by default)
 	- Pattern: double quotes
 	- Literal: single quotes
+	- Add single and double quotes to the stack when parsing
 - Parameterized rules:
 	- Symbol definition: `greet(name)`
 	- Rule definition: `Hi, [$name]!`
@@ -25,6 +25,6 @@
 	- Nicer formatting
 	- Reuse the last input when a blank line is entered
 - Notify about syntax errors nicely rather than throwing raw Python exceptions
-- Flag to control whether unused variables are reset between lines
+- Flag to control whether unused variables are reset between queries
 - Precompute rules to avoid running regex matches for every query
 - Make basic guesses at indefinite articles and plurals if inflect is not installed
