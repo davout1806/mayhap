@@ -36,7 +36,7 @@ sadObservation
 	You start to wonder why you're even out here.
 	Maybe they're right; this is no place for a(n) unusual animal. ^2 # TODO @unusual_animal.mh
 	The world just seems too adjective. # TODO @adjective.mh
-	This whole situation reminds you so much of [PROJECT|OPERATION] CODENAME. # TODO @codename.mh, .upperCase
+	This whole situation reminds you so much of [PROJECT|OPERATION] CODENAME. # TODO @codename.mh
 
 decision
 	You decide that it's time to [doAThing].

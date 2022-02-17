@@ -3,24 +3,12 @@
 - Ordinals:
 	- `[1-10](th)`
 	- `[1-10.ordinal]`?
-- Pluralization:
-	- Conditional:
-		- `[x=1-5] [item.s($x)]`
+- Conditional pluralization: `[x=1-5] [item.s($x)]`
 - Case:
-	- Preserve case
-		- `[sYmBoL nAmE]`
-	- Lower case:
-		- `[symbol name]`
-		- `[sYmBoL nAmE.lower]`
-	- Sentence case:
-		- `[Symbol name]`
-		- `[sYmBoL nAmE.sentence]`
-	- Title case:
-		- `[Symbol Name]`
-		- `[sYmBoL nAmE.title]`
-	- Upper case:
-		- `[SYMBOL NAME]`
-		- `[sYmBoL nAmE.upper]`
+	- Lower case: `[symbol name]`
+	- Sentence case: `[Symbol name]`
+	- Title case: `[Symbol Name]`
+	- Upper case: `[SYMBOL NAME]`
 - Patterns vs. blocks:
 	- Special: all text in blocks (by default)
 	- Pattern: double quotes

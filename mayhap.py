@@ -78,6 +78,19 @@ MOD_A = set(['a'])
 # Pluralize this symbol
 MOD_S = set(['s', 'plural', 'pluralForm'])
 
+# Convert to lowercase
+MOD_LOWER = set(['lower', 'lowerCase'])
+
+# Convert to sentence case (capitalize the first letter of the first word)
+# TODO capitalize the first word of every sentence
+MOD_SENTENCE = set(['sentence', 'sentenceCase'])
+
+# Convert to title case (capitalize the first letter of each word)
+MOD_TITLE = set(['title', 'titleCase'])
+
+# Convert to upper case
+MOD_UPPER = set(['upper', 'upperCase'])
+
 INFLECT_ENGINE = inflect.engine()
 
 
@@ -168,19 +181,19 @@ def grammar_to_string(grammar):
 
 
 def parse_modifiers(block):
-    modifiers = set()
+    modifiers = []
     for match in RE_MODIFIER.finditer(block):
         # Slice block to get the symbol if this is the first match
         if not modifiers:
             symbol = block[:match.start()]
-        modifiers.add(match[1])
+        modifiers.append(match[1])
     if not modifiers:
         symbol = block
     return symbol, modifiers
 
 
 def has_modifier(modifier, modifiers):
-    return not modifier.isdisjoint(modifiers)
+    return not modifier.isdisjoint(set(modifiers))
 
 
 def get_article(word):
@@ -352,11 +365,19 @@ class Generator:
             rule = self.produce(symbol, unique)
             pattern = self.evaluate_pattern(rule.production, depth)
 
-        if has_modifier(MOD_S, modifiers):
-            pattern = get_plural(pattern)
-
-        if has_modifier(MOD_A, modifiers):
-            pattern = get_article(pattern) + pattern
+        for modifier in modifiers:
+            if modifier in MOD_S:
+                pattern = get_plural(pattern)
+            elif modifier in MOD_A:
+                pattern = get_article(pattern) + pattern
+            elif modifier in MOD_LOWER:
+                pattern = pattern.lower()
+            elif modifier in MOD_SENTENCE:
+                pattern = pattern.capitalize()
+            elif modifier in MOD_TITLE:
+                pattern = pattern.title()
+            elif modifier in MOD_UPPER:
+                pattern = pattern.upper()
 
         return pattern
 
