@@ -1,9 +1,9 @@
 # TODO
 
 - Ranges:
-	- Alphabetic ranges: `[a-z]`, `[A-Z]`
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
 	- Ordinals: `[1-10.th]`
+- Repeated accesses: `[5 * [0-9]`
 - Conditional pluralization: `[x=1-5] [item.s($x)]`
 - Case:
 	- Lower case: `[symbol]`

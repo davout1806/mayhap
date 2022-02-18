@@ -40,9 +40,11 @@ RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)\s*$')
 # e.g. \t# hello world
 RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 
-# Matches integer ranges separated by a hyphen
+# Matches ranges separated by a hyphen
 # e.g. 10-20
-RE_RANGE = re.compile(r'([+-]?\d+)-([+-]?\d+)')
+RE_RANGE_NUMERIC = re.compile(r'([+-]?\d+)-([+-]?\d+)')
+# e.g. a-z
+RE_RANGE_ALPHA = re.compile(r'([a-zA-Z])-([a-zA-Z])')
 
 # Matches echoed variable assignments (variable name followed by equals and the
 # value)
@@ -117,8 +119,8 @@ class Token:
 
 class LiteralToken(Token):
     def __init__(self, string, modifiers):
-        self.modifiers = modifiers
         self.string = string
+        self.modifiers = modifiers
 
     def __str__(self):
         string_term = f"'{self.string}'"
@@ -131,12 +133,25 @@ class LiteralToken(Token):
 
 
 class RangeToken(Token):
-    def __init__(self, range_value, modifiers):
-        self.modifiers = modifiers
+    def __init__(self, range_value, char, modifiers):
         self.range = range_value
+        self.char = char
+        self.modifiers = modifiers
+
+    @property
+    def start(self):
+        if self.char:
+            return chr(self.range.start)
+        return self.range.start
+
+    @property
+    def stop(self):
+        if self.char:
+            return chr(self.range.stop - 1)
+        return self.range.stop - 1
 
     def __str__(self):
-        range_term = f'{self.range.start}-{self.range.stop}'
+        range_term = f'{self.start}-{self.stop}'
         terms = [range_term] + self.modifiers
         return f"[{'.'.join(terms)}]"
 
@@ -147,8 +162,8 @@ class RangeToken(Token):
 
 class SymbolToken(Token):
     def __init__(self, symbol, modifiers):
-        self.modifiers = modifiers
         self.symbol = symbol
+        self.modifiers = modifiers
 
     def __str__(self):
         symbol_term = join_as_strings(self.symbol)
@@ -162,8 +177,8 @@ class SymbolToken(Token):
 
 class VariableToken(Token):
     def __init__(self, variable, modifiers):
-        self.modifiers = modifiers
         self.variable = variable
+        self.modifiers = modifiers
 
     def __str__(self):
         return f'[${join_as_strings(self.variable)}]'
@@ -288,14 +303,27 @@ def tokenize_block(block):
     block = block.strip()
     content, modifiers = parse_modifiers(block)
 
-    match = RE_RANGE.match(content)
+    match = RE_RANGE_NUMERIC.match(content)
+    is_range = False
     if match:
+        is_range = True
+        char = False
         bound1 = int(match[1])
         bound2 = int(match[2])
-        lower = min(bound1, bound2)
-        upper = max(bound1, bound2)
-        token_range = range(lower, upper + 1)
-        return [RangeToken(token_range, modifiers)]
+    else:
+        match = RE_RANGE_ALPHA.match(content)
+        if match:
+            is_range = True
+            char = True
+            assert match[1].isupper() == match[2].isupper()
+            bound1 = ord(match[1])
+            bound2 = ord(match[2])
+
+    if is_range:
+        start = min(bound1, bound2)
+        stop = max(bound1, bound2) + 1
+        token_range = range(start, stop)
+        return [RangeToken(token_range, char, modifiers)]
 
     match = RE_VARIABLE.match(content)
     if match:
@@ -400,8 +428,10 @@ def grammar_to_string(grammar):
 def get_article(word):
     return INFLECT_ENGINE.a(word).split(' ')[0]
 
+
 def add_article(word):
     return INFLECT_ENGINE.a(word)
+
 
 def resolve_indefinite_articles(pattern):
     output = ''
@@ -546,7 +576,11 @@ class Generator:
         if isinstance(token, LiteralToken):
             string = token.string
         elif isinstance(token, RangeToken):
-            string = str(random.choice(token.range))
+            choice = random.choice(token.range)
+            if token.char:
+                string = chr(choice)
+            else:
+                string = str(choice)
         elif isinstance(token, SymbolToken):
             symbol = self.evaluate_tokens(token.symbol, depth=depth + 1)
             rule = self.produce(symbol)
