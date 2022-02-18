@@ -138,16 +138,16 @@ def parse_grammar(lines):
     current_symbol = None
     grammar = {}
     for line in lines:
-        stripped = line.strip()
-        if stripped:
+        line = line.strip()
+        if line:
             # Strip trailing comments
-            match = RE_COMMENT.search(stripped)
+            match = RE_COMMENT.search(line)
             if match:
-                stripped = stripped[:match.start(2)].strip()
-                if not stripped:
+                line = line[:match.start(2)].strip()
+                if not line:
                     continue
 
-            match = RE_IMPORT.match(stripped)
+            match = RE_IMPORT.match(line)
             if match:
                 import_file_name = match[1]
                 # Default to .mh extension if not specified
@@ -159,13 +159,13 @@ def parse_grammar(lines):
 
             # Indented lines contain production rules
             if line[0].isspace():
-                rule = Rule.parse(stripped)
+                rule = Rule.parse(line)
                 rule.production = rule.production.strip()
                 grammar[current_symbol].add(rule)
 
             # Unindented lines contain symbols
             else:
-                current_symbol = stripped
+                current_symbol = line
                 grammar[current_symbol] = set()
     return grammar
 
