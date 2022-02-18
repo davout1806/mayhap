@@ -44,9 +44,15 @@ RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 # e.g. 10-20
 RE_RANGE = re.compile(r'([+-]?\d+)-([+-]?\d+)')
 
-# Matches variable assignments (variable name followed by equals and the value)
+# Matches echoed variable assignments (variable name followed by equals and the
+# value)
 # e.g. _0varName= [symbol] pattern [2-5]
-RE_ASSIGNMENT = re.compile(r'([^\.]+)=([^\.]+)')
+RE_ASSIGNMENT_ECHOED = re.compile(r'([^\.]+)=([^\.]+)')
+
+# Matches silent variable assignments (variable name followed by tilda equals
+# and the value)
+# e.g. _0varName= [symbol] pattern [2-5]
+RE_ASSIGNMENT_SILENT = re.compile(r'([^\.]+)~=([^\.]+)')
 
 # Matches variable accesses (dollar sign followed by a variable name)
 # e.g. $_0varName
@@ -168,17 +174,20 @@ class VariableToken(Token):
 
 
 class AssignmentToken(Token):
-    def __init__(self, variable, value):
+    def __init__(self, variable, value, echo):
         self.variable = variable
         self.value = value
+        self.echo = echo
 
     def __str__(self):
-        return (f'[{join_as_strings(self.variable)} = '
+        operator = '=' if self.echo else '~='
+        return (f'[{join_as_strings(self.variable)}{operator}'
                 f'{join_as_strings(self.value)}]')
 
     def __repr__(self):
         return (f'AssignmentToken(variable={self.variable}, '
-                f'value={self.value})')
+                f'value={self.value}, '
+                f'echo={self.echo})')
 
 
 class ChoiceToken(Token):
@@ -258,13 +267,23 @@ def tokenize_block(block):
             return []
         return tokenize_pattern(block[1:-1])
 
-    match = RE_ASSIGNMENT.match(block)
+    assignment = False
+    match = RE_ASSIGNMENT_SILENT.match(block)
     if match:
+        assignment = True
+        echo = False
+    else:
+        match = RE_ASSIGNMENT_ECHOED.match(block)
+        if match:
+            assignment = True
+            echo = True
+
+    if assignment:
         variable_pattern = match[1].strip()
         variable_tokens = tokenize_pattern(variable_pattern)
         value_block = match[2].strip()
         value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable_tokens, value_tokens)]
+        return [AssignmentToken(variable_tokens, value_tokens, echo)]
 
     block = block.strip()
     content, modifiers = parse_modifiers(block)
@@ -381,6 +400,8 @@ def grammar_to_string(grammar):
 def get_article(word):
     return INFLECT_ENGINE.a(word).split(' ')[0]
 
+def add_article(word):
+    return INFLECT_ENGINE.a(word)
 
 def resolve_indefinite_articles(pattern):
     output = ''
@@ -517,9 +538,10 @@ class Generator:
         if isinstance(token, AssignmentToken):
             variable = self.evaluate_tokens(token.variable, depth=depth + 1)
             value = self.evaluate_tokens(token.value, depth=depth + 1)
-            self.log(tokens=[AssignmentToken(variable, value)], depth=depth)
+            self.log(tokens=[AssignmentToken(variable, value, token.echo)],
+                     depth=depth)
             self.variables[variable] = value
-            return value
+            return value if token.echo else ''
 
         if isinstance(token, LiteralToken):
             string = token.string
@@ -541,7 +563,7 @@ class Generator:
                 if modifier in MOD_S:
                     string = get_plural(string)
                 elif modifier in MOD_A:
-                    string = get_article(string) + string
+                    string = add_article(string)
                 elif modifier in MOD_CAPITALIZE:
                     string = string.capitalize()
                 elif modifier in MOD_LOWER:

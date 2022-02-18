@@ -19,9 +19,6 @@
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
 - Markov chains: `[name.markov]`
-- Variable assignments:
-	- Silent: `[variable = value]`
-	- Echoed: `[$variable = value]`?
 - Escape characters:
 	- Intentional leading/trailing whitespace: `\ my rule \ ^2`
 	- Blocks: `\[not a block\]`
@@ -37,6 +34,10 @@
 	- Input prompts
 	- Nicer formatting
 	- Reuse the last input when a blank line is entered
+- Add syntax to reference symbols rather than having to `eval` them as strings
+	- Symbol reference: `[x = @symbol]`
+	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
+- Local variable scope
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()`
 - Notify about syntax errors nicely rather than throwing raw Python exceptions
 - Flag to control whether unused variables are reset between queries
