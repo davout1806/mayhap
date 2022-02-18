@@ -9,5 +9,5 @@ lastName
 	Williams
 
 sentence
-	Her name was [n = [name.title]]. [$n] [lastName.title], if I recall correctly.
-	I think her name was [n = [name.title]]? [$n] [l = [lastName.title]]? Wait, no, it was [n = [name.title]]. Yeah, that's right, [$n] [$l].
+	Her name was [n = name.title]. [$n] [lastName.title], if I recall correctly.
+	I think her name was [n = name.title]? [$n] [l = lastName.title]? Wait, no, it was [n = name.title]. Yeah, that's right, [$n] [$l].

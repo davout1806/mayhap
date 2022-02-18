@@ -33,4 +33,4 @@ story
 	[$hero] traveled with her pet [$heroPet].  [$hero] was never [mood], for the [$heroPet] was always too [mood].
 
 origin
-	[hero = [name]][heroPet = [animal]][story]
+	[hero = name][heroPet = animal][story]

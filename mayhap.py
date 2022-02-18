@@ -34,7 +34,7 @@ RE_IMPORT = re.compile(r'@(.+)')
 # Matches a weight appended to a rule (a number preceded by a caret at the end
 # of the line)
 # e.g. ^4.25
-RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)$')
+RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)\s*$')
 
 # Matches comments (lines starting with a hash)
 # e.g. \t# hello world
@@ -44,13 +44,13 @@ RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 # e.g. 10-20
 RE_RANGE = re.compile(r'([+-]?\d+)-([+-]?\d+)')
 
-# Matches variable definitions (variable name followed by equals and the value)
+# Matches variable assignments (variable name followed by equals and the value)
 # e.g. _0varName= [symbol] pattern [2-5]
-RE_VARIABLE_SET = re.compile(r'([^\.]+)=([^\.]+)')
+RE_ASSIGNMENT = re.compile(r'([^\.]+)=([^\.]+)')
 
 # Matches variable accesses (dollar sign followed by a variable name)
 # e.g. $_0varName
-RE_VARIABLE_GET = re.compile(r'\$([^\.]+)')
+RE_VARIABLE = re.compile(r'\$([^\.]+)')
 
 # Matches modifiers (period followed by a modifier type)
 # e.g. .mundane
@@ -68,54 +68,254 @@ RE_S = re.compile(r'\((s)\)', re.IGNORECASE)
 # Must parse manually, as regular expressions cannot easily parse nested groups
 BLOCK_START = '['
 BLOCK_END = ']'
+PATTERN_START = '"'
+PATTERN_END = '"'
+LITERAL_START = "'"
+LITERAL_END = "'"
 
 # Do not require a unique production to be chosen from the given symbol
-MOD_MUNDANE = set(['mundane'])
+MOD_MUNDANE = 'mundane'
 
 # Add a context-sensitive indefinite article before this symbol
-MOD_A = set(['a'])
+MOD_A = 'a'
 
 # Pluralize this symbol
-MOD_S = set(['s', 'plural', 'pluralForm'])
+MOD_S = 's'
 
 # Capitalize the first letter of the first word
-MOD_CAPITALIZE = set(['capitalize'])
+MOD_CAPITALIZE = 'capitalize'
 
 # Convert to lowercase
-MOD_LOWER = set(['lower', 'lowerCase'])
+MOD_LOWER = 'lower'
 
 # Convert to upper case
-MOD_UPPER = set(['upper', 'upperCase'])
+MOD_UPPER = 'upper'
 
 # Convert to title case (capitalize the first letter of each word)
-MOD_TITLE = set(['title', 'titleCase'])
+MOD_TITLE = 'title'
+
+# The default weight for rules with no explicit weight
+DEFAULT_WEIGHT = 1.0
 
 INFLECT_ENGINE = inflect.engine()
 
 
+def join_as_strings(objects, delimiter=''):
+    # For extreme debugging, change str(obj) to repr(obj)
+    return delimiter.join([str(obj) for obj in objects])
+
+
+class Token:
+    pass
+
+
+class LiteralToken(Token):
+    def __init__(self, string, modifiers):
+        self.modifiers = modifiers
+        self.string = string
+
+    def __str__(self):
+        string_term = f"'{self.string}'"
+        terms = [string_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'LiteralToken(string={repr(self.string)}, '
+                f'modifiers={self.modifiers})')
+
+
+class RangeToken(Token):
+    def __init__(self, range_value, modifiers):
+        self.modifiers = modifiers
+        self.range = range_value
+
+    def __str__(self):
+        range_term = f'{self.range.start}-{self.range.stop}'
+        terms = [range_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'RangeToken(range={self.range}, '
+                f'modifiers={self.modifiers})')
+
+
+class SymbolToken(Token):
+    def __init__(self, symbol, modifiers):
+        self.modifiers = modifiers
+        self.symbol = symbol
+
+    def __str__(self):
+        symbol_term = join_as_strings(self.symbol)
+        terms = [symbol_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'SymbolToken(symbol={self.symbol}, '
+                f'modifiers={self.modifiers})')
+
+
+class VariableToken(Token):
+    def __init__(self, variable, modifiers):
+        self.modifiers = modifiers
+        self.variable = variable
+
+    def __str__(self):
+        return f'[${join_as_strings(self.variable)}]'
+
+    def __repr__(self):
+        return (f'VariableToken(variable={self.variable}, '
+                f'modifiers={self.modifiers})')
+
+
+class AssignmentToken(Token):
+    def __init__(self, variable, value):
+        self.variable = variable
+        self.value = value
+
+    def __str__(self):
+        return (f'[{join_as_strings(self.variable)} = '
+                f'{join_as_strings(self.value)}]')
+
+    def __repr__(self):
+        return (f'AssignmentToken(variable={self.variable}, '
+                f'value={self.value})')
+
+
+class ChoiceToken(Token):
+    def __init__(self, rules):
+        self.rules = rules
+
+    def __str__(self):
+        return f'[{join_as_strings(self.rules, delimiter="|")}]'
+
+    def __repr__(self):
+        return f'ChoiceToken(rules={self.rules})'
+
+
+def parse_modifiers(block):
+    modifiers = []
+    for match in RE_MODIFIER.finditer(block):
+        # Slice block to get its content if this is the first match
+        if not modifiers:
+            content = block[:match.start()]
+        modifiers.append(match[1])
+    if not modifiers:
+        content = block
+    return content, modifiers
+
+
+def tokenize_pattern(pattern):
+    tokens = []
+    stack = []
+    literal_start = 0
+    i = 0
+    while i < len(pattern):
+        # If a block starts here, push its start index on the stack
+        if pattern[i] == BLOCK_START:
+            # If is top-level block, add the literal that was just traversed
+            if not stack and i != literal_start:
+                tokens.append(pattern[literal_start:i])
+            stack.append(i)
+
+        # If a block ends here, pop its start index off the stack
+        elif pattern[i] == BLOCK_END:
+            start = stack.pop()
+            # If this is a top-level block, tokenize it
+            if not stack:
+                end = i
+                block_pattern = pattern[start + 1:end]
+                block_tokens = tokenize_block(block_pattern)
+                for token in block_tokens:
+                    tokens.append(token)
+                literal_start = i + 1
+
+        i += 1
+    if i != literal_start:
+        tokens.append(pattern[literal_start:i])
+    return tokens
+
+
+def tokenize_block(block):
+    if not block:
+        return Token()
+
+    if (len(block) >= 2 and
+            block[0] == LITERAL_START and
+            block[-1] == LITERAL_END):
+        if len(block) == 2:
+            return []
+        return [block[1:-1]]
+
+    choices = block.split('|')
+    if len(choices) > 1:
+        rules = [Rule.parse(rule) for rule in choices]
+        return [ChoiceToken(rules)]
+
+    if (len(block) >= 2 and
+            block[0] == PATTERN_START and
+            block[-1] == PATTERN_START):
+        if len(block) == 2:
+            return []
+        return tokenize_pattern(block[1:-1])
+
+    match = RE_ASSIGNMENT.match(block)
+    if match:
+        variable_pattern = match[1].strip()
+        variable_tokens = tokenize_pattern(variable_pattern)
+        value_block = match[2].strip()
+        value_tokens = tokenize_block(value_block)
+        return [AssignmentToken(variable_tokens, value_tokens)]
+
+    block = block.strip()
+    content, modifiers = parse_modifiers(block)
+
+    match = RE_RANGE.match(content)
+    if match:
+        bound1 = int(match[1])
+        bound2 = int(match[2])
+        lower = min(bound1, bound2)
+        upper = max(bound1, bound2)
+        token_range = range(lower, upper + 1)
+        return [RangeToken(token_range, modifiers)]
+
+    match = RE_VARIABLE.match(content)
+    if match:
+        variable_pattern = match[1].strip()
+        variable_tokens = tokenize_pattern(variable_pattern)
+        return [VariableToken(variable_tokens, modifiers)]
+
+    # Assume this is a symbol
+    symbol_pattern = content
+    symbol_tokens = tokenize_pattern(symbol_pattern)
+    return [SymbolToken(symbol_tokens, modifiers)]
+
+
 class Rule:
-    def __init__(self, production, weight):
-        self.production = production
+    def __init__(self, tokens, weight):
+        self.tokens = tokens
         self.weight = weight
 
     @staticmethod
-    def parse(rule):
+    def parse(rule, strip=False):
         '''
         Parses an production rule into a weight and a production string.
         '''
         # Look for an explicit weight
         match = RE_WEIGHT.search(rule)
         if match:
-            weight = float(match[1].strip())
+            weight = float(match[1])
             string_end = match.start()
 
         # Default to 1 weight otherwise
         else:
-            weight = 1.0
+            weight = DEFAULT_WEIGHT
             string_end = len(rule)
 
-        production = rule[:string_end]
-        return Rule(production, weight)
+        pattern = rule[:string_end]
+        if strip:
+            pattern = pattern.strip()
+        tokens = tokenize_pattern(pattern)
+        return Rule(tokens, weight)
 
     @staticmethod
     def choose(rules):
@@ -128,23 +328,23 @@ class Rule:
         return rule
 
     def __str__(self):
-        return f'"{self.production}" (weight {self.weight})'
+        return f'{join_as_strings(self.tokens)}^{self.weight}'
 
     def __repr__(self):
-        return f'Rule(production={self.production}, weight={self.weight})'
+        return f'Rule(tokens={self.tokens}, weight={self.weight})'
 
 
 def parse_grammar(lines):
     current_symbol = None
     grammar = {}
     for line in lines:
-        line = line.strip()
-        if line:
+        stripped = line.strip()
+        if stripped:
             # Strip trailing comments
-            match = RE_COMMENT.search(line)
+            match = RE_COMMENT.search(stripped)
             if match:
-                line = line[:match.start(2)].strip()
-                if not line:
+                stripped = stripped[:match.start(2)].strip()
+                if not stripped:
                     continue
 
             match = RE_IMPORT.match(line)
@@ -159,13 +359,12 @@ def parse_grammar(lines):
 
             # Indented lines contain production rules
             if line[0].isspace():
-                rule = Rule.parse(line)
-                rule.production = rule.production.strip()
+                rule = Rule.parse(stripped, strip=True)
                 grammar[current_symbol].add(rule)
 
             # Unindented lines contain symbols
             else:
-                current_symbol = line
+                current_symbol = stripped
                 grammar[current_symbol] = set()
     return grammar
 
@@ -173,26 +372,10 @@ def parse_grammar(lines):
 def grammar_to_string(grammar):
     string = ''
     for symbol, rules in grammar.items():
-        string += f'"{symbol}":\n'
+        string += f'{symbol}\n'
         for rule in rules:
             string += f'\t{rule}\n'
     return string
-
-
-def parse_modifiers(block):
-    modifiers = []
-    for match in RE_MODIFIER.finditer(block):
-        # Slice block to get the symbol if this is the first match
-        if not modifiers:
-            symbol = block[:match.start()]
-        modifiers.append(match[1])
-    if not modifiers:
-        symbol = block
-    return symbol, modifiers
-
-
-def has_modifier(modifier, modifiers):
-    return not modifier.isdisjoint(set(modifiers))
 
 
 def get_article(word):
@@ -296,7 +479,8 @@ class Generator:
         if unique:
             # If all symbols have been used, old symbols must be reused
             # Recreate and draw from the unused list again to reduce duplicates
-            # TODO consider throwing an error if symbols must be reused
+            # TODO consider throwing an error (or logging a warning) if symbols
+            # must be reused
             if len(self.unused[symbol]) == 0:
                 self.unused[symbol] = self.grammar[symbol].copy()
 
@@ -309,114 +493,89 @@ class Generator:
             self.unused[symbol].remove(rule)
         return rule
 
-    def log(self, string, block, depth=0):
+    def log(self, string='', tokens=None, depth=0):
         '''
         Log the given pattern to standard error, indented by its recursion
         depth for readability.
         '''
         if self.verbose:
-            start = '[' if block else '"'
-            end = ']' if block else '"'
-            print(f'{"  " * depth}{start}{string}{end}', file=sys.stderr)
+            if tokens is None:
+                tokens = []
+            print(f'{"  " * depth}{string}{join_as_strings(tokens)}',
+                  file=sys.stderr)
 
-    def evaluate_block(self, block, depth=0):
-        '''
-        Expand the given block and return the final expanded string.
-        '''
-        self.log(block, block=True, depth=depth)
+    def evaluate_token(self, token, depth=0):
+        if isinstance(token, str):
+            return token
 
-        # Choose a item from the shortlist to produce
-        shortlist = block.split('|')
-        if len(shortlist) > 1:
-            rules = [Rule.parse(rule) for rule in shortlist]
-            rule = Rule.choose(rules)
-            return self.evaluate_pattern(rule.production, depth)
+        self.log(tokens=[token], depth=depth)
 
-        block = block.strip()
+        if isinstance(token, ChoiceToken):
+            rule = Rule.choose(token.rules)
+            return self.evaluate_tokens(rule.tokens, depth=depth + 1)
 
-        match = RE_RANGE.match(block)
-        if match:
-            bound1 = int(match[1])
-            bound2 = int(match[2])
-            lower = min(bound1, bound2)
-            upper = max(bound1, bound2)
-            choice = str(random.choice(range(lower, upper + 1)))
-            self.log(choice, block=False, depth=depth)
-            return choice
+        if isinstance(token, AssignmentToken):
+            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            value = self.evaluate_tokens(token.value, depth=depth + 1)
+            self.log(tokens=[AssignmentToken(variable, value)], depth=depth)
+            self.variables[variable] = value
+            return value
 
-        match = RE_VARIABLE_SET.match(block)
-        if match:
-            variable = match[1].strip()
-            value_pattern = match[2].strip()
-            value_production = self.evaluate_pattern(value_pattern, depth)
-            self.variables[variable] = value_production
-            return value_production
+        if isinstance(token, LiteralToken):
+            string = token.string
+        elif isinstance(token, RangeToken):
+            string = str(random.choice(token.range))
+        elif isinstance(token, SymbolToken):
+            symbol = self.evaluate_tokens(token.symbol, depth=depth + 1)
+            rule = self.produce(symbol)
+            string = self.evaluate_tokens(rule.tokens, depth=depth + 1)
+        elif isinstance(token, VariableToken):
+            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            value = self.variables[variable]
+            string = value
 
-        symbol, modifiers = parse_modifiers(block)
+        if token.modifiers:
+            self.log(tokens=[LiteralToken(string, token.modifiers)],
+                     depth=depth)
+            for modifier in token.modifiers:
+                if modifier in MOD_S:
+                    string = get_plural(string)
+                elif modifier in MOD_A:
+                    string = get_article(string) + string
+                elif modifier in MOD_CAPITALIZE:
+                    string = string.capitalize()
+                elif modifier in MOD_LOWER:
+                    string = string.lower()
+                elif modifier in MOD_UPPER:
+                    string = string.upper()
+                elif modifier in MOD_TITLE:
+                    string = string.title()
 
-        match = RE_VARIABLE_GET.match(block)
-        if match:
-            variable = match[1].strip()
-            pattern = self.variables[variable]
-        else:
-            # Substitute in a randomly chosen production of this symbol
-            unique = not has_modifier(MOD_MUNDANE, modifiers)
-            rule = self.produce(symbol, unique)
-            pattern = self.evaluate_pattern(rule.production, depth)
+        self.log(string=string, depth=depth)
 
-        for modifier in modifiers:
-            if modifier in MOD_S:
-                pattern = get_plural(pattern)
-            elif modifier in MOD_A:
-                pattern = get_article(pattern) + pattern
-            elif modifier in MOD_CAPITALIZE:
-                pattern = pattern.capitalize()
-            elif modifier in MOD_LOWER:
-                pattern = pattern.lower()
-            elif modifier in MOD_UPPER:
-                pattern = pattern.upper()
-            elif modifier in MOD_TITLE:
-                pattern = pattern.title()
+        return string
 
-        return pattern
+    def evaluate_tokens(self, tokens, depth=0):
+        string = ''
 
-    def evaluate_pattern(self, pattern, depth=0):
-        '''
-        Expand all blocks in the given pattern and return the final expanded
-        string.
-        '''
-        self.log(pattern, block=False, depth=depth)
+        for i, token in enumerate(tokens):
+            if isinstance(token, str):
+                string += token
+            else:
+                self.log(string=string, tokens=tokens[i:], depth=depth)
+                string += self.evaluate_token(token, depth=depth + 1)
 
-        stack = []
-        i = 0
-        while i < len(pattern):
-            # If a block starts here, push its start index on the stack
-            if pattern[i] == BLOCK_START:
-                stack.append(i)
+        if len(tokens) > 1:
+            self.log(string=string, depth=depth)
+        prev_string = string
 
-            # If a block ends here, pop its start index off the stack and
-            # resolve it
-            elif pattern[i] == BLOCK_END:
-                start = stack.pop()
-                end = i
-                block = pattern[start + 1:end]
-                production = self.evaluate_block(block, depth + 1)
-                pattern = (pattern[:start] +
-                           production +
-                           pattern[end + 1:])
+        string = resolve_indefinite_articles(string)
+        string = resolve_plurals(string)
 
-                self.log(pattern, block=False, depth=depth)
+        if string != prev_string:
+            self.log(string=string, depth=depth)
 
-                # Assume the production is fully resolved
-                # Jump to the next unprocessed index
-                i = start + len(production)
-                continue
-
-            i += 1
-
-        pattern = resolve_indefinite_articles(pattern)
-        pattern = resolve_plurals(pattern)
-        return pattern
+        return string
 
     def evaluate_input(self, pattern):
         '''
@@ -427,10 +586,13 @@ class Generator:
         # If a symbol name was given, expand it
         if pattern in self.grammar:
             rule = self.produce(pattern)
-            return self.evaluate_pattern(rule.production)
+            string = self.evaluate_tokens(rule.tokens)
+            return string
 
         # Otherwise, interpret the input as a pattern
-        return self.evaluate_pattern(pattern)
+        tokens = tokenize_pattern(pattern)
+        string = self.evaluate_tokens(tokens)
+        return string
 
 
 def main():
