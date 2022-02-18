@@ -2,8 +2,7 @@
 
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
-	- Ordinals: `[1-10.th]`
-- Repeated accesses: `[5 * [0-9]`
+- Repeated accesses: `[5 * [0-9]]`
 - Conditional pluralization: `[x=1-5] [item.s($x)]`
 - Case:
 	- Lower case: `[symbol]`
@@ -35,9 +34,10 @@
 	- Nicer formatting
 	- Reuse the last input when a blank line is entered
 - Add syntax to reference symbols rather than having to `eval` them as strings
-	- Symbol reference: `[x = @symbol]`
+	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
 - Local variable scope
+- C-style format string support: `['%02d' % [0-60]]`
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()`
 - Notify about syntax errors nicely rather than throwing raw Python exceptions
 - Flag to control whether unused variables are reset between queries

@@ -66,11 +66,11 @@ RE_MODIFIER = re.compile(r'\.([^\.]+)')
 
 # Matches dynamic indefinite articles
 # e.g. a(n)
-RE_A = re.compile(r'(a)\((n)\)', re.IGNORECASE)
+RE_ARTICLE = re.compile(r'(a)\((n)\)', re.IGNORECASE)
 
 # Matches dynamic pluralization
 # e.g. (s)
-RE_S = re.compile(r'\((s)\)', re.IGNORECASE)
+RE_PLURAL = re.compile(r'\((s)\)', re.IGNORECASE)
 
 # The start and end of a block
 # Must parse manually, as regular expressions cannot easily parse nested groups
@@ -85,10 +85,13 @@ LITERAL_END = "'"
 MOD_MUNDANE = 'mundane'
 
 # Add a context-sensitive indefinite article before this symbol
-MOD_A = 'a'
+MOD_ARTICLE = 'a'
 
 # Pluralize this symbol
-MOD_S = 's'
+MOD_PLURAL = 's'
+
+# Convert this number to an ordinal (e.g. 1st, 10th)
+MOD_ORDINAL = 'th'
 
 # Capitalize the first letter of the first word
 MOD_CAPITALIZE = 'capitalize'
@@ -436,7 +439,7 @@ def add_article(word):
 def resolve_indefinite_articles(pattern):
     output = ''
     last_match = 0
-    for match in RE_A.finditer(pattern):
+    for match in RE_ARTICLE.finditer(pattern):
         output += pattern[last_match:match.start()]
 
         # Find the next word in the pattern
@@ -472,7 +475,7 @@ def get_plural(word, number=None):
 def resolve_plurals(pattern):
     output = ''
     last_match = 0
-    for match in RE_S.finditer(pattern):
+    for match in RE_PLURAL.finditer(pattern):
         # Find the previous number
         previous_word = ''
         previous_number = ''
@@ -513,6 +516,10 @@ def resolve_plurals(pattern):
         last_match = match.end()
     output += pattern[last_match:]
     return output
+
+
+def get_ordinal(number):
+    return INFLECT_ENGINE.ordinal(number)
 
 
 class Generator:
@@ -594,10 +601,12 @@ class Generator:
             self.log(tokens=[LiteralToken(string, token.modifiers)],
                      depth=depth)
             for modifier in token.modifiers:
-                if modifier in MOD_S:
+                if modifier in MOD_PLURAL:
                     string = get_plural(string)
-                elif modifier in MOD_A:
+                elif modifier in MOD_ARTICLE:
                     string = add_article(string)
+                elif modifier in MOD_ORDINAL:
+                    string = get_ordinal(string)
                 elif modifier in MOD_CAPITALIZE:
                     string = string.capitalize()
                 elif modifier in MOD_LOWER:
