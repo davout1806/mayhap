@@ -30,10 +30,6 @@
 	  ```py
 	  my_string.encode('raw_unicode_escape').decode('unicode_escape')`
 	  ```
-- Interactive mode:
-	- Input prompts
-	- Nicer formatting
-	- Reuse the last input when a blank line is entered
 - Add syntax to reference symbols rather than having to `eval` them as strings
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)

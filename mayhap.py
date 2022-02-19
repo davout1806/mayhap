@@ -109,6 +109,10 @@ MOD_TITLE = 'title'
 # The default weight for rules with no explicit weight
 DEFAULT_WEIGHT = 1.0
 
+# The string that prefixes commands in interactive mode
+# Non-command inputs are interpreted as patterns or symbols
+COMMAND_PREFIX = '/'
+
 INFLECT_ENGINE = inflect.engine()
 
 
@@ -661,60 +665,80 @@ class Generator:
         return string
 
 
+def filter_completions(command, completions):
+    return [completion for completion in completions if
+            completion.startswith(command)]
+
+
 class MayhapShell(Cmd):
     def __init__(self, generator):
         super().__init__()
         self.generator = generator
         self.prompt = '> '
 
+    @property
+    def symbols(self):
+        return list(self.generator.grammar.keys())
+
     def precmd(self, line):
         if line and line != 'EOF':
-            if line.startswith('/'):
-                line = line[1:]
+            if line.startswith(COMMAND_PREFIX):
+                line = line[len(COMMAND_PREFIX):]
             else:
                 line = 'evaluate ' + line
         return line
 
     def completenames(self, text, *ignored):
-        if not text:
-            symbols = list(self.generator.grammar.keys())
-            commands = super().completenames(text)
-            completions = symbols + ['/' + command for command in commands]
-            return completions
-
-        if text.startswith('/'):
-            command = text[1:]
-            commands = super().completenames(command)
-            completions = ['/' + command for command in commands]
-            return completions
-
-        symbols = list(self.generator.grammar.keys())
-        completions = [symbol for symbol in symbols if
-                       symbol.startswith(text)]
+        command_started = text.startswith(COMMAND_PREFIX)
+        if command_started:
+            command = text[len(COMMAND_PREFIX):]
+        else:
+            command = text
+        commands = super().completenames(command)
+        if not command_started:
+            commands = [COMMAND_PREFIX + command for command in commands]
+        completions = []
+        if not text or command_started:
+            completions += commands
+        if not text or not command_started:
+            completions += self.symbols
+        completions = filter_completions(command, completions)
         return completions
 
-    def default(self, line):
-        print(self.generator.evaluate_input(line))
-
-    def completedefault(self, *ignored):
-        symbols = self.generator.grammar.keys()
-        return list(symbols)
+    # pylint: disable=arguments-differ, unused-argument
+    def completedefault(self, text, line, *args):
+        if ' ' in line:
+            return filter_completions(text, self.symbols)
+        return self.completenames(line, line, args)
 
     def do_evaluate(self, arg):
+        '''
+        Evaluate the given argument as a pattern. If the argument exactly
+        matches a symbol, it is expanded. Called automatically if no command is
+        specified.
+        '''
         print(self.generator.evaluate_input(arg))
 
     def do_list(self, arg):
+        '''
+        List the symbols in the current grammar if no argument is given. List
+        the expansions of the given symbol if an argument is given.
+        '''
         if not arg:
-            symbols = self.generator.grammar.keys()
-            print('\n'.join(symbols))
+            print('\n'.join(self.symbols))
         else:
             symbol = arg
             rules = self.generator.grammar[symbol]
             print(join_as_strings(rules, delimiter='\n'))
 
+    # pylint: disable=no-self-use, unused-argument
     def do_exit(self, line):
+        '''
+        Exit the shell.
+        '''
         return True
 
+    # pylint: disable=no-self-use, unused-argument
     def do_EOF(self, line):
         # TODO don't show EOF as a command option
         print()
