@@ -18,11 +18,12 @@
 from argparse import ArgumentParser, FileType
 from cmd import Cmd
 from copy import deepcopy
-from os import chdir
+from os import chdir, isatty
 from os.path import dirname, isfile
 import random
 import re
 import sys
+from sys import stderr, stdin
 from traceback import format_exc
 from typing import Optional
 
@@ -138,8 +139,8 @@ class MayhapGrammarError(MayhapError):
         self.line = line
 
     def print(self):
-        print(f'ERROR (line {self.number}): {self.message}', file=sys.stderr)
-        print(self.line, file=sys.stderr)
+        print(f'ERROR (line {self.number}): {self.message}', file=stderr)
+        print(self.line, file=stderr)
 
 
 class Token:
@@ -654,7 +655,7 @@ class Generator:
             if tokens is None:
                 tokens = []
             print(f'{"  " * depth}{string}{join_as_strings(tokens)}',
-                  file=sys.stderr)
+                  file=stderr)
 
     def evaluate_token(self, token, depth=0):
         if isinstance(token, str):
@@ -765,9 +766,9 @@ class Generator:
             return True
         except MayhapError as e:
             if self.verbose:
-                print(format_exc(), file=sys.stderr)
+                print(format_exc(), file=stderr)
             else:
-                print(f'ERROR: {e}', file=sys.stderr)
+                print(f'ERROR: {e}', file=stderr)
             return False
 
 
@@ -866,11 +867,16 @@ def main():
             nargs='?',
             help='the pattern to generate from the grammar; if this argument '
                  'is not provided, read from standard input instead')
-    parser.add_argument(
+    interactive_group = parser.add_mutually_exclusive_group()
+    interactive_group.add_argument(
             '-i', '--interactive',
             action='store_true',
-            help='run in interactive mode (input prompts, repeat last query '
-                 'when no input is given)')
+            help='run as an interactive shell (default if reading from a TTY)')
+    interactive_group.add_argument(
+            '-b', '--batch',
+            action='store_true',
+            help='use non-interactive batch processing mode (default if '
+                 'reading from a pipe)')
     parser.add_argument(
             '-v', '--verbose',
             action='store_true',
@@ -889,7 +895,7 @@ def main():
         return 1
 
     if args.verbose:
-        print(grammar_to_string(grammar), file=sys.stderr)
+        print(grammar_to_string(grammar), file=stderr)
 
     generator = Generator(grammar, args.verbose)
 
@@ -897,15 +903,22 @@ def main():
     if args.pattern:
         return 0 if generator.handle_input(args.pattern) else 1
 
+    if args.interactive:
+        use_shell = True
+    elif args.batch:
+        use_shell = False
+    else:
+        use_shell = isatty(stdin.fileno())
+
     # Otherwise, read standard input
     try:
-        if args.interactive:
+        if use_shell:
             MayhapShell(generator).cmdloop()
         else:
-            for line in sys.stdin:
+            for line in stdin:
                 # Strip trailing newline
                 line = line[:-1]
-                success = generator.handle_input(args.pattern)
+                success = generator.handle_input(line)
                 if not success:
                     return 1
     except KeyboardInterrupt:

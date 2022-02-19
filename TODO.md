@@ -10,6 +10,7 @@
 	- Lower case: `[symbol]`
 	- Title case: `[Symbol]`
 	- Upper case: `[SYMBOL]`
+	- Limit symbol and variable names to alphanumeric and underscores, starting with a letter
 - Patterns vs. blocks:
 	- Special: all text in blocks (by default)
 	- Pattern: double quotes
@@ -36,11 +37,11 @@
 - Add syntax to reference symbols rather than having to evaluate them as strings
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
-	- (Current workaround: `[x ~= 'symbol'][[$x]]`
+	- (Current workaround: `[x ~= 'symbol'][[$x]]`)
 - C-style format string support: `['%02d' % [0-60]]`
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
-- Flag to control whether unused variables are reset between queries
+- Flag to control whether unused variables are reset between queries (`persistent`)
 - Shell commands
 	- Show grammar: `/grammar`
 	- Import another grammar: `/import path_to_grammar.mh`
@@ -49,7 +50,7 @@
 	- Add rule: `/add symbol_name rule_name`
 	- Remove symbol: `/remove symbol_name`
 	- Remove rule: `/remove symbol_name rule_name`
-	- Toggle generator flags: `/set verbose true`
+	- Toggle generator flags: `/set verbose`/`/unset verbose` or `/set verbose true`
 - Run file as shell script (use `Cmd` but disable prompt)
 - Argument to print "compiled" grammar
 - Syntax documentation/tutorial
