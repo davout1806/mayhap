@@ -38,7 +38,17 @@
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()`
 - Notify about syntax errors nicely rather than throwing raw Python exceptions
 - Flag to control whether unused variables are reset between queries
-- Make basic guesses at indefinite articles and plurals if inflect is not installed
+- Shell commands
+	- Show grammar: `/grammar`
+	- Import another grammar: `/import path_to_grammar.mh`
+	- Save grammar to file: `/export path_to_grammar.mh`
+	- Add symbol: `/add symbol_name`
+	- Add rule: `/add symbol_name rule_name`
+	- Remove symbol: `/remove symbol_name`
+	- Remove rule: `/remove symbol_name rule_name`
+	- Toggle generator flags: `/set verbose true`
+- Run file as shell script (use `Cmd` but disable prompt)
+- Argument to print "compiled" grammar
 - Syntax documentation/tutorial
 - Test suite
 	- Unit tests

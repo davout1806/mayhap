@@ -2,12 +2,12 @@
 
 A grammar-based random text generator, inspired by [Perchance](https://perchance.org).
 
-## Setup
+## Installation
 
 Dependencies:
 
 - Python 3
-- [inflect](https://github.com/jaraco/inflect)
+- [inflect](https://github.com/jaraco/inflect) (optional; required for quality articles, plurals, and ordinals)
 
 To install Mayhap, clone the repository and install the required dependencies by running:
 ```sh

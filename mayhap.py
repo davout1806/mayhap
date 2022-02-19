@@ -23,8 +23,14 @@ from os.path import dirname, isfile
 import random
 import re
 import sys
+from typing import Optional
 
-import inflect
+
+try:
+    import inflect
+    INFLECT: Optional[inflect.engine] = inflect.engine()
+except ImportError:
+    INFLECT = None
 
 
 # Matches the name of a generator to import when parsing a grammar
@@ -112,8 +118,6 @@ DEFAULT_WEIGHT = 1.0
 # The string that prefixes commands in interactive mode
 # Non-command inputs are interpreted as patterns or symbols
 COMMAND_PREFIX = '/'
-
-INFLECT_ENGINE = inflect.engine()
 
 
 def join_as_strings(objects, delimiter=''):
@@ -434,11 +438,17 @@ def grammar_to_string(grammar):
 
 
 def get_article(word):
-    return INFLECT_ENGINE.a(word).split()[0]
+    if INFLECT:
+        return INFLECT.a(word).split()[0]
+    if word and word[0] in 'aeiou':
+        return 'an'
+    return 'a'
 
 
 def add_article(word):
-    return INFLECT_ENGINE.a(word)
+    if INFLECT:
+        return INFLECT.a(word)
+    return get_article(word) + ' ' + word
 
 
 def resolve_indefinite_articles(pattern):
@@ -472,9 +482,13 @@ def resolve_indefinite_articles(pattern):
 
 
 def get_plural(word, number=None):
-    if number is not None:
-        return INFLECT_ENGINE.plural(word, number)
-    return INFLECT_ENGINE.plural(word)
+    if INFLECT:
+        if number is not None:
+            return INFLECT.plural(word, number)
+        return INFLECT.plural(word)
+    if number is not None and number == 1:
+        return word
+    return word + 's'
 
 
 def resolve_plurals(pattern):
@@ -524,7 +538,17 @@ def resolve_plurals(pattern):
 
 
 def get_ordinal(number):
-    return INFLECT_ENGINE.ordinal(number)
+    if INFLECT:
+        return INFLECT.ordinal(number)
+    if number.isdigit():
+        last_digit = int(number) % 10
+        if last_digit == 1:
+            return f'{number}st'
+        if last_digit == 2:
+            return f'{number}nd'
+        if last_digit == 3:
+            return f'{number}rd'
+    return f'{number}th'
 
 
 class Generator:
