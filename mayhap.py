@@ -23,6 +23,7 @@ from os.path import dirname, isfile
 import random
 import re
 import sys
+from traceback import format_exc
 from typing import Optional
 
 
@@ -123,6 +124,22 @@ COMMAND_PREFIX = '/'
 def join_as_strings(objects, delimiter=''):
     # For extreme debugging, change str(obj) to repr(obj)
     return delimiter.join([str(obj) for obj in objects])
+
+
+class MayhapError(Exception):
+    pass
+
+
+class MayhapGrammarError(MayhapError):
+    def __init__(self, message, number, line):
+        super().__init__()
+        self.message = message
+        self.number = number
+        self.line = line
+
+    def print(self):
+        print(f'ERROR (line {self.number}): {self.message}', file=sys.stderr)
+        print(self.line, file=sys.stderr)
 
 
 class Token:
@@ -255,6 +272,9 @@ def tokenize_pattern(pattern):
 
         # If a block ends here, pop its start index off the stack
         elif pattern[i] == BLOCK_END:
+            if not stack:
+                raise MayhapError(f'Unmatched end of block at column {i}')
+
             start = stack.pop()
             # If this is a top-level block, tokenize it
             if not stack:
@@ -266,8 +286,13 @@ def tokenize_pattern(pattern):
                 literal_start = i + 1
 
         i += 1
+
+    if stack:
+        raise MayhapError(f'Unclosed block starting at column {stack[0]}')
+
     if i != literal_start:
         tokens.append(pattern[literal_start:i])
+
     return tokens
 
 
@@ -327,7 +352,9 @@ def tokenize_block(block):
         if match:
             is_range = True
             char = True
-            assert match[1].isupper() == match[2].isupper()
+            if match[1].isupper() != match[2].isupper():
+                raise MayhapError(f'Range bounds ({match[1]} and {match[2]}) '
+                                  'must have the same case')
             bound1 = ord(match[1])
             bound2 = ord(match[2])
 
@@ -362,7 +389,14 @@ class Rule:
         # Look for an explicit weight
         match = RE_WEIGHT.search(rule)
         if match:
-            weight = float(match[1])
+            try:
+                weight = float(match[1])
+            except ValueError as e:
+                raise MayhapError(f'Weight "{weight}" must be a positive '
+                                  'decimal number') from e
+            if weight < 0:
+                raise MayhapError(f'Weight "{weight}" must be a positive '
+                                  'decimal number')
             string_end = match.start()
 
         # Default to 1 weight otherwise
@@ -396,7 +430,7 @@ class Rule:
 def parse_grammar(lines):
     current_symbol = None
     grammar = {}
-    for line in lines:
+    for i, line in enumerate(lines):
         stripped = line.strip()
         if stripped:
             # Strip trailing comments
@@ -412,17 +446,41 @@ def parse_grammar(lines):
                 # Default to .mh extension if not specified
                 if not isfile(import_file_name):
                     import_file_name = f'{match[1]}.mh'
-                with open(import_file_name) as import_file:
-                    grammar |= parse_grammar(import_file)
+                try:
+                    with open(import_file_name) as import_file:
+                        try:
+                            grammar |= parse_grammar(import_file)
+                        except MayhapError as e:
+                            message = ('Error while importing grammar from '
+                                       f'{import_file_name}: {e}')
+                            raise MayhapGrammarError(message,
+                                                     i + 1,
+                                                     line) from e
+                except (OSError) as e:
+                    message = ('Failed to import grammar from '
+                               f'{import_file_name}: {e}')
+                    raise MayhapGrammarError(message, i + 1, line) from e
                 continue
 
             # Indented lines contain production rules
             if line[0].isspace():
-                rule = Rule.parse(stripped, strip=True)
+                if current_symbol is None:
+                    raise MayhapGrammarError('Production rule given before '
+                                             'symbol', i + 1, line)
+
+                try:
+                    rule = Rule.parse(stripped, strip=True)
+                except MayhapError as e:
+                    raise MayhapGrammarError(str(e), i + 1, line) from e
                 grammar[current_symbol].add(rule)
 
             # Unindented lines contain symbols
             else:
+                if current_symbol and not grammar[current_symbol]:
+                    raise MayhapGrammarError(f'Symbol "{current_symbol}" '
+                                             'closed with no production rules',
+                                             i + 1, line)
+
                 current_symbol = stripped
                 grammar[current_symbol] = set()
     return grammar
@@ -568,14 +626,21 @@ class Generator:
             # Recreate and draw from the unused list again to reduce duplicates
             # TODO consider throwing an error (or logging a warning) if symbols
             # must be reused
-            if len(self.unused[symbol]) == 0:
+            rules = self.unused.get(symbol)
+            if rules is None:
+                raise MayhapError(f'Symbol "{symbol}" not found')
+
+            if len(rules) == 0:
                 self.unused[symbol] = self.grammar[symbol].copy()
 
             rule = Rule.choose(self.unused[symbol])
             self.unused[symbol].remove(rule)
             return rule
 
-        rule = Rule.choose(self.grammar[symbol])
+        rules = self.grammar[symbol]
+        if rules is None:
+            raise MayhapError(f'Symbol "{symbol}" not found')
+        rule = Rule.choose(rules)
         if rule in self.unused[symbol]:
             self.unused[symbol].remove(rule)
         return rule
@@ -623,27 +688,33 @@ class Generator:
             string = self.evaluate_tokens(rule.tokens, depth=depth + 1)
         elif isinstance(token, VariableToken):
             variable = self.evaluate_tokens(token.variable, depth=depth + 1)
-            value = self.variables[variable]
+            value = self.variables.get(variable)
+            if value is None:
+                raise MayhapError(f'Variable "{variable}" not found')
             string = value
 
         if token.modifiers:
             self.log(tokens=[LiteralToken(string, token.modifiers)],
                      depth=depth)
             for modifier in token.modifiers:
-                if modifier in MOD_PLURAL:
+                if modifier == MOD_PLURAL:
                     string = get_plural(string)
-                elif modifier in MOD_ARTICLE:
+                elif modifier == MOD_ARTICLE:
                     string = add_article(string)
-                elif modifier in MOD_ORDINAL:
+                elif modifier == MOD_ORDINAL:
                     string = get_ordinal(string)
-                elif modifier in MOD_CAPITALIZE:
+                elif modifier == MOD_CAPITALIZE:
                     string = string.capitalize()
-                elif modifier in MOD_LOWER:
+                elif modifier == MOD_LOWER:
                     string = string.lower()
-                elif modifier in MOD_UPPER:
+                elif modifier == MOD_UPPER:
                     string = string.upper()
-                elif modifier in MOD_TITLE:
+                elif modifier == MOD_TITLE:
                     string = string.title()
+                elif modifier == MOD_MUNDANE:
+                    pass
+                else:
+                    raise MayhapError(f'Unknown modifier "{modifier}"')
 
         self.log(string=string, depth=depth)
 
@@ -687,6 +758,17 @@ class Generator:
         tokens = tokenize_pattern(pattern)
         string = self.evaluate_tokens(tokens)
         return string
+
+    def handle_input(self, pattern):
+        try:
+            print(self.evaluate_input(pattern))
+            return True
+        except MayhapError as e:
+            if self.verbose:
+                print(format_exc(), file=sys.stderr)
+            else:
+                print(f'ERROR: {e}', file=sys.stderr)
+            return False
 
 
 def filter_completions(command, completions):
@@ -741,7 +823,7 @@ class MayhapShell(Cmd):
         matches a symbol, it is expanded. Called automatically if no command is
         specified.
         '''
-        print(self.generator.evaluate_input(arg))
+        self.generator.handle_input(arg)
 
     def do_list(self, arg):
         '''
@@ -799,7 +881,13 @@ def main():
     # Change working directory to directory containing the given grammar
     # This allows for import paths relative to the given grammar
     chdir(dirname(args.grammar.name))
-    grammar = parse_grammar(args.grammar)
+
+    try:
+        grammar = parse_grammar(args.grammar)
+    except MayhapGrammarError as e:
+        e.print()
+        return 1
+
     if args.verbose:
         print(grammar_to_string(grammar), file=sys.stderr)
 
@@ -807,8 +895,7 @@ def main():
 
     # If a pattern was given, generate it and exit
     if args.pattern:
-        print(generator.evaluate_input(args.pattern))
-        return 0
+        return 0 if generator.handle_input(args.pattern) else 1
 
     # Otherwise, read standard input
     try:
@@ -818,7 +905,9 @@ def main():
             for line in sys.stdin:
                 # Strip trailing newline
                 line = line[:-1]
-                print(generator.evaluate_input(line))
+                success = generator.handle_input(args.pattern)
+                if not success:
+                    return 1
     except KeyboardInterrupt:
         # Quietly handle SIGINT, like cat does
         print()

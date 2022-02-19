@@ -2,6 +2,7 @@
 
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
+	- Dice parsing: `[2d6+3]`?
 - Fractional weights `^2/5.5`
 - Repeated accesses: `[5 * [0-9]]`
 - Conditional pluralization: `[x=1-5] [item.s($x)]`
@@ -14,11 +15,13 @@
 	- Pattern: double quotes
 	- Literal: single quotes
 	- Allow modifiers for patterns and literals
+- Local variable scoping
 - Parameterized rules:
 	- Symbol definition: `greet(name)`
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
-- Markov chains: `[name.markov]`
+- Markov chains: `@markov symbolname`?
+- Default output: `@default symbolname`?
 - Escape characters:
 	- Intentional leading/trailing whitespace: `\ my rule \ ^2`
 	- Blocks: `\[not a block\]`
@@ -30,13 +33,13 @@
 	  ```py
 	  my_string.encode('raw_unicode_escape').decode('unicode_escape')`
 	  ```
-- Add syntax to reference symbols rather than having to `eval` them as strings
+- Add syntax to reference symbols rather than having to evaluate them as strings
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
-- Local variable scope
+	- (Current workaround: `[x ~= 'symbol'][[$x]]`
 - C-style format string support: `['%02d' % [0-60]]`
-- Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()`
-- Notify about syntax errors nicely rather than throwing raw Python exceptions
+- Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
+- Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
 - Flag to control whether unused variables are reset between queries
 - Shell commands
 	- Show grammar: `/grammar`
