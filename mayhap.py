@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from argparse import ArgumentParser, FileType
+from cmd import Cmd
 from copy import deepcopy
 from os import chdir
 from os.path import dirname, isfile
@@ -429,7 +430,7 @@ def grammar_to_string(grammar):
 
 
 def get_article(word):
-    return INFLECT_ENGINE.a(word).split(' ')[0]
+    return INFLECT_ENGINE.a(word).split()[0]
 
 
 def add_article(word):
@@ -660,6 +661,66 @@ class Generator:
         return string
 
 
+class MayhapShell(Cmd):
+    def __init__(self, generator):
+        super().__init__()
+        self.generator = generator
+        self.prompt = '> '
+
+    def precmd(self, line):
+        if line and line != 'EOF':
+            if line.startswith('/'):
+                line = line[1:]
+            else:
+                line = 'evaluate ' + line
+        return line
+
+    def completenames(self, text, *ignored):
+        if not text:
+            symbols = list(self.generator.grammar.keys())
+            commands = super().completenames(text)
+            completions = symbols + ['/' + command for command in commands]
+            return completions
+
+        if text.startswith('/'):
+            command = text[1:]
+            commands = super().completenames(command)
+            completions = ['/' + command for command in commands]
+            return completions
+
+        symbols = list(self.generator.grammar.keys())
+        completions = [symbol for symbol in symbols if
+                       symbol.startswith(text)]
+        return completions
+
+    def default(self, line):
+        print(self.generator.evaluate_input(line))
+
+    def completedefault(self, *ignored):
+        symbols = self.generator.grammar.keys()
+        return list(symbols)
+
+    def do_evaluate(self, arg):
+        print(self.generator.evaluate_input(arg))
+
+    def do_list(self, arg):
+        if not arg:
+            symbols = self.generator.grammar.keys()
+            print('\n'.join(symbols))
+        else:
+            symbol = arg
+            rules = self.generator.grammar[symbol]
+            print(join_as_strings(rules, delimiter='\n'))
+
+    def do_exit(self, line):
+        return True
+
+    def do_EOF(self, line):
+        # TODO don't show EOF as a command option
+        print()
+        return True
+
+
 def main():
     '''
     Parse arguments and handle input and output.
@@ -675,6 +736,11 @@ def main():
             nargs='?',
             help='the pattern to generate from the grammar; if this argument '
                  'is not provided, read from standard input instead')
+    parser.add_argument(
+            '-i', '--interactive',
+            action='store_true',
+            help='run in interactive mode (input prompts, repeat last query '
+                 'when no input is given)')
     parser.add_argument(
             '-v', '--verbose',
             action='store_true',
@@ -698,12 +764,21 @@ def main():
 
     # Otherwise, read standard input
     try:
-        for line in sys.stdin:
-            print(generator.evaluate_input(line.strip()))
+        if args.interactive:
+            MayhapShell(generator).cmdloop()
+        else:
+            for line in sys.stdin:
+                # Strip trailing newline
+                line = line[:-1]
+                print(generator.evaluate_input(line))
     except KeyboardInterrupt:
         # Quietly handle SIGINT, like cat does
         print()
         return 1
+    except EOFError:
+        # Quietly handle EOF in interactive mode
+        print()
+        return 0
 
     return 0
 

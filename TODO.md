@@ -2,6 +2,7 @@
 
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
+- Fractional weights `^2/5.5`
 - Repeated accesses: `[5 * [0-9]]`
 - Conditional pluralization: `[x=1-5] [item.s($x)]`
 - Case:
