@@ -1,30 +1,39 @@
 # TODO
 
+- Rewrite using `pyparsing` instead of regex and custom methods
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
-	- Dice parsing: `[2d6+3]`?
+	- Dice parsing: `[2d6+3]`
+		- Regex: `(\d+)d(\d+)([+-](\d+)d(\d+))*([+-]\d+)?`
+		- `dice` module
 - Fractional weights `^2/5.5`
-- Repeated accesses: `[5 * [0-9]]`
-- Conditional pluralization: `[x=1-5] [item.s($x)]`
+- Repeated accesses: `[5 * 0-9]`
+- Inflections:
+	- Conditional pluralization: `[x=1-5] [item.s($x)]`
+	- Present participle: `[verb.ing]`
+		- `inflect.present_participle`
+	- Pronouns:
+		- `[$gender = ['masculine'|'feminine'|'gender-neutral']]`
+		- `['they'.gender($gender)]`
+		- `[gender.they]`
+		- `inflect.gender` and `inflect.singular_noun`
+	- Tense: `[verb.ed]`, etc.
+		- https://github.com/clips/pattern (currently lacking Python 3.7 support)
 - Case:
 	- Lower case: `[symbol]`
 	- Title case: `[Symbol]`
 	- Upper case: `[SYMBOL]`
 	- Limit symbol and variable names to alphanumeric and underscores, starting with a letter
-- Patterns vs. blocks:
-	- Special: all text in blocks (by default)
-	- Pattern: double quotes
-	- Literal: single quotes
-	- Allow modifiers for patterns and literals
+- Allow modifiers for patterns and literals
 - Local variable scoping
 - Parameterized rules:
 	- Symbol definition: `greet(name)`
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
 - Markov chains: `@markov symbolname`?
-- Default output: `@default symbolname`?
 - Escape characters:
 	- Intentional leading/trailing whitespace: `\ my rule \ ^2`
+		- Workaround: `[' my rule '] ^2`
 	- Blocks: `\[not a block\]`
 	- a: `a\(n\)`
 	- s: `\(s\)`
@@ -34,14 +43,17 @@
 	  ```py
 	  my_string.encode('raw_unicode_escape').decode('unicode_escape')`
 	  ```
-- Add syntax to reference symbols rather than having to evaluate them as strings
+- Change silent assignment operator to just `~`
+- Add syntax to reference symbols?
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
-	- (Current workaround: `[x ~= 'symbol'][[$x]]`)
+	- Workaround: `[x ~= 'symbol'][[$x]]`
 - C-style format string support: `['%02d' % [0-60]]`
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
-- Flag to control whether unused variables are reset between queries (`persistent`)
+- Namespaces for imported grammars: `[animals:bird]`
+- Point to the character where an error happened (strip indentation)
+- Flag to control whether unused variables are preserved between queries (`persistent`, false by default)
 - Shell commands
 	- Show grammar: `/grammar`
 	- Import another grammar: `/import path_to_grammar.mh`
@@ -58,3 +70,4 @@
 	- Unit tests
 	- Regression tests (compile all samples and compare new compiles against saved versions)
 	- Benchmarking (generate large grammar and query files)
+- Create a vim syntax file for Mayhap grammars
