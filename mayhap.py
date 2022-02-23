@@ -826,6 +826,12 @@ class MayhapShell(Cmd):
         '''
         self.generator.handle_input(arg)
 
+    def do_grammar(self, arg):
+        '''
+        Display the parsed form of the loaded grammar.
+        '''
+        print(grammar_to_string(self.generator.grammar))
+
     def do_list(self, arg):
         '''
         List the symbols in the current grammar if no argument is given. List

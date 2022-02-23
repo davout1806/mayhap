@@ -54,7 +54,6 @@
 - Point to the character where an error happened (strip indentation)
 - Flag to control whether unused variables are preserved between queries (`persistent`, false by default)
 - Shell commands
-	- Show grammar: `/grammar`
 	- Import another grammar: `/import path_to_grammar.mh`
 	- Save grammar to file: `/export path_to_grammar.mh`
 	- Add symbol: `/add symbol_name`
