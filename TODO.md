@@ -53,10 +53,11 @@
 - Namespaces for imported grammars: `[animals:bird]`
 - Point to the character where an error happened (strip indentation)
 - Flag to control whether unused variables are preserved between queries (`persistent`, false by default)
+- Flag to make symbols default to mundane
 - Shell commands
-	- Import another grammar: `/import path_to_grammar.mh`
 	- Save grammar to file: `/export path_to_grammar.mh`
 	- Toggle generator flags: `/set verbose`/`/unset verbose` or `/set verbose true`
+- Improve autocomplete and fix autocomplete for help
 - Run file as shell script (use `Cmd` but disable prompt)
 - Argument to print "compiled" grammar
 - Syntax documentation/tutorial

@@ -127,6 +127,13 @@ def join_as_strings(objects, delimiter=''):
     return delimiter.join([str(obj) for obj in objects])
 
 
+def print_error(e, verbose=True):
+    if verbose:
+        print(format_exc(), file=stderr)
+    else:
+        print(f'ERROR: {e}', file=stderr)
+
+
 class MayhapError(Exception):
     pass
 
@@ -428,6 +435,22 @@ class Rule:
         return f'Rule(tokens={self.tokens}, weight={self.weight})'
 
 
+def import_grammar(import_file_name):
+    # Default to .mh extension if not specified
+    if not isfile(import_file_name) and not import_file_name.endswith('.mh'):
+        import_file_name = f'{import_file_name}.mh'
+    try:
+        with open(import_file_name) as import_file:
+            try:
+                return parse_grammar(import_file)
+            except MayhapError as e:
+                raise MayhapError('Error while importing grammar from '
+                                  f'{import_file_name}: {e}') from e
+    except (OSError) as e:
+        raise MayhapError('Failed to import grammar from '
+                          f'{import_file_name}: {e}') from e
+
+
 def parse_grammar(lines):
     current_symbol = None
     grammar = {}
@@ -444,23 +467,10 @@ def parse_grammar(lines):
             match = RE_IMPORT.match(line)
             if match:
                 import_file_name = match[1]
-                # Default to .mh extension if not specified
-                if not isfile(import_file_name):
-                    import_file_name = f'{match[1]}.mh'
                 try:
-                    with open(import_file_name) as import_file:
-                        try:
-                            grammar |= parse_grammar(import_file)
-                        except MayhapError as e:
-                            message = ('Error while importing grammar from '
-                                       f'{import_file_name}: {e}')
-                            raise MayhapGrammarError(message,
-                                                     i + 1,
-                                                     line) from e
-                except (OSError) as e:
-                    message = ('Failed to import grammar from '
-                               f'{import_file_name}: {e}')
-                    raise MayhapGrammarError(message, i + 1, line) from e
+                    grammar |= import_grammar(import_file_name)
+                except MayhapError as e:
+                    raise MayhapGrammarError(str(e), i + 1, line) from e
                 continue
 
             # Indented lines contain production rules
@@ -765,10 +775,7 @@ class Generator:
             print(self.evaluate_input(pattern))
             return True
         except MayhapError as e:
-            if self.verbose:
-                print(format_exc(), file=stderr)
-            else:
-                print(f'ERROR: {e}', file=stderr)
+            print_error(e, self.verbose)
             return False
 
 
@@ -894,6 +901,22 @@ class MayhapShell(Cmd):
                 return
         print(f'Symbol "{symbol}" has no rule "{rule_string}"')
 
+    def do_import(self, arg):
+        '''
+        Import another grammar file.
+        NOTE: The path you give must be relative to the grammar file you
+        opened.
+        '''
+        if not arg:
+            print('Usage: import [path to grammar file]')
+            return
+        try:
+            imported_grammar = import_grammar(arg)
+            self.generator.grammar |= imported_grammar
+            self.generator.unused |= deepcopy(imported_grammar)
+        except MayhapError as e:
+            print_error(e, self.generator.verbose)
+
     # pylint: disable=no-self-use
     def do_exit(self, arg):
         '''
@@ -946,8 +969,8 @@ def main():
 
     try:
         grammar = parse_grammar(args.grammar)
-    except MayhapGrammarError as e:
-        e.print()
+    except MayhapError as e:
+        print_error(e, args.verbose)
         return 1
 
     if args.verbose:
