@@ -57,13 +57,13 @@ RE_RANGE_ALPHA = re.compile(r'([a-zA-Z])-([a-zA-Z])')
 
 # Matches echoed variable assignments (variable name followed by equals and the
 # value)
-# e.g. _0varName= [symbol] pattern [2-5]
+# e.g. _0varName= symbol
 RE_ASSIGNMENT_ECHOED = re.compile(r'([^\.]+)=([^\.]+)')
 
 # Matches silent variable assignments (variable name followed by tilda equals
 # and the value)
-# e.g. _0varName= [symbol] pattern [2-5]
-RE_ASSIGNMENT_SILENT = re.compile(r'([^\.]+)~=([^\.]+)')
+# e.g. _0varName~ symbol
+RE_ASSIGNMENT_SILENT = re.compile(r'([^\.]+)~([^\.]+)')
 
 # Matches variable accesses (dollar sign followed by a variable name)
 # e.g. $_0varName
@@ -225,7 +225,7 @@ class AssignmentToken(Token):
         self.echo = echo
 
     def __str__(self):
-        operator = '=' if self.echo else '~='
+        operator = '=' if self.echo else '~'
         return (f'[{join_as_strings(self.variable)}{operator}'
                 f'{join_as_strings(self.value)}]')
 

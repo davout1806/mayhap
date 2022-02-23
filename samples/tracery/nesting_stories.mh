@@ -72,9 +72,9 @@ mood
 	courteous
 
 setPronouns
-	[heroThey ~= 'they'][heroThem ~= 'them'][heroTheir ~= 'their'][heroTheirs ~= 'theirs']
-	[heroThey ~= 'she'][heroThem ~= 'her'][heroTheir ~= 'her'][heroTheirs ~= 'hers']
-	[heroThey ~= 'he'][heroThem ~= 'him'][heroTheir ~= 'his'][heroTheirs ~= 'his']
+	[heroThey ~ 'they'][heroThem ~ 'them'][heroTheir ~ 'their'][heroTheirs ~ 'theirs']
+	[heroThey ~ 'she'][heroThem ~ 'her'][heroTheir ~ 'her'][heroTheirs ~ 'hers']
+	[heroThey ~ 'he'][heroThem ~ 'him'][heroTheir ~ 'his'][heroTheirs ~ 'his']
 
 setSailForAdventure
 	set sail for adventure
@@ -83,7 +83,7 @@ setSailForAdventure
 	went to seek [$heroTheir] forture
 
 setCharacter
-	[setPronouns][hero ~= name][heroJob ~= occupation]
+	[setPronouns][hero ~ name][heroJob ~ occupation]
 
 openBook
 	An old [occupation] told [$hero] a story. "Listen well" she said to [$hero], "to this [strange] [tale]. [origin]"

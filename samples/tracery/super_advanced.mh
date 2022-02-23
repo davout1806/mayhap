@@ -24,9 +24,9 @@ monster
 	warlord
 
 setPronouns
-	[heroThey ~= 'they'][heroThem ~= 'them'][heroTheir ~= 'their'][heroTheirs ~= 'theirs']
-	[heroThey ~= 'she'][heroThem ~= 'her'][heroTheir ~= 'her'][heroTheirs ~= 'hers']
-	[heroThey ~= 'he'][heroThem ~= 'him'][heroTheir ~= 'his'][heroTheirs ~= 'his']
+	[heroThey ~ 'they'][heroThem ~ 'them'][heroTheir ~ 'their'][heroTheirs ~ 'theirs']
+	[heroThey ~ 'she'][heroThem ~ 'her'][heroTheir ~ 'her'][heroTheirs ~ 'hers']
+	[heroThey ~ 'he'][heroThem ~ 'him'][heroTheir ~ 'his'][heroTheirs ~ 'his']
 
 bakerDidStuff
 	baked bread
@@ -42,8 +42,8 @@ warriorDidStuff
 	defeated [monster.a]
 
 setOccupation
-	[occupation ~= 'baker'][didStuff ~= 'bakerDidStuff']
-	[occupation ~= 'warrior'][didStuff ~= 'warriorDidStuff']
+	[occupation ~ 'baker'][didStuff ~ 'bakerDidStuff']
+	[occupation ~ 'warrior'][didStuff ~ 'warriorDidStuff']
 
 origin
-	[setPronouns][setOccupation][hero ~= name][story]
+	[setPronouns][setOccupation][hero ~ name][story]

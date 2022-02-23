@@ -43,11 +43,10 @@
 	  ```py
 	  my_string.encode('raw_unicode_escape').decode('unicode_escape')`
 	  ```
-- Change silent assignment operator to just `~`
 - Add syntax to reference symbols?
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
-	- Workaround: `[x ~= 'symbol'][[$x]]`
+	- Workaround: `[x ~ 'symbol'][[$x]]`
 - C-style format string support: `['%02d' % [0-60]]`
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
