@@ -844,15 +844,65 @@ class MayhapShell(Cmd):
             rules = self.generator.grammar[symbol]
             print(join_as_strings(rules, delimiter='\n'))
 
-    # pylint: disable=no-self-use, unused-argument
-    def do_exit(self, line):
+    def do_add(self, arg):
+        '''
+        Add a new symbol and/or rule to the grammar.
+        '''
+        if not arg:
+            print('Usage: add [symbol] [rule]')
+            return
+        terms = arg.split(' ')
+        symbol = terms[0]
+        if symbol in self.generator.grammar:
+            if len(terms) == 1:
+                print(f'Symbol "{symbol}" already exists')
+                return
+        else:
+            self.generator.grammar[symbol] = set()
+        if len(terms) > 1:
+            rule_string = arg[len(symbol):].strip()
+            rule = Rule.parse(rule_string)
+            self.generator.grammar[symbol].add(rule)
+
+    def do_remove(self, arg):
+        '''
+        Remove a symbol and/or rule from the grammar.
+        '''
+        if not arg:
+            print('Usage: remove [symbol] [rule]')
+            return
+
+        terms = arg.split(' ')
+        if len(terms) > 2:
+            print('Usage: remove [symbol] [rule]')
+            return
+
+        symbol = terms[0]
+        if symbol not in self.generator.grammar:
+            print(f'Symbol "{symbol}" does not exist')
+            return
+
+        if len(terms) == 1:
+            self.generator.grammar.remove(symbol)
+            return
+
+        rule_string = arg[len(symbol):].strip()
+        rules = self.generator.grammar[symbol]
+        for rule in rules:
+            if str(rule) == rule_string:
+                rules.remove(rule)
+                return
+        print(f'Symbol "{symbol}" has no rule "{rule_string}"')
+
+    # pylint: disable=no-self-use
+    def do_exit(self, arg):
         '''
         Exit the shell.
         '''
         return True
 
-    # pylint: disable=no-self-use, unused-argument
-    def do_EOF(self, line):
+    # pylint: disable=no-self-use
+    def do_EOF(self, arg):
         # TODO don't show EOF as a command option
         print()
         return True
