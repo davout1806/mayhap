@@ -51,6 +51,8 @@
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
 - Namespaces for imported grammars: `[animals:bird]`
+	- Custom namespace: `@namespace mynamespace`?
+	- Import with a custom namespace ("import as")
 - Point to the character where an error happened (strip indentation)
 - Flag to control whether unused variables are preserved between queries (`persistent`, false by default)
 - Flag to make symbols default to mundane
