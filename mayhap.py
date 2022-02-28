@@ -50,32 +50,40 @@ except ImportError:
     INFLECT = None
 
 special = Forward()
-modifier = Suppress('.') + Word(alphanums + '_')
-block = Suppress('[') + Group(special) + ZeroOrMore(modifier) + Suppress(']')
-# FIXME infinite loop
-# FIXME can't parse variable assignments
+block = Suppress('[') + Group(special) + Suppress(']')
 
-token = Forward()
+unquoted_text = (Combine(OneOrMore(
+    Word(printables + ' ', exclude_chars='"[]')))).leave_whitespace()
+unquoted_token = Forward()
+
+text = Combine(OneOrMore(
+    Word(printables + ' ', exclude_chars='[]'))).leave_whitespace()
+
 literal = sgl_quoted_string.set_parse_action(remove_quotes)
-pattern = Suppress('"') + Group(OneOrMore(token)) + Suppress('"')
-# FIXME infinite loop
+pattern = Suppress('"') + Group(OneOrMore(unquoted_token)) + Suppress('"')
 
-symbol = Word(alphanums + '_')  # FIXME matches first word of multi-word string
+symbol = Word(alphanums + '_')
 variable_name = Word(alphanums + '_')
 variable_access = Suppress('$') + variable_name
+choice = (Combine(OneOrMore(Word(printables + ' ', exclude_chars='|[]'))) ^
+          block)
+choices = choice + OneOrMore(Suppress('|') + choice)
+
 variable_assignment_echo = variable_name + Word('=').suppress() + special
 variable_assignment_silent = variable_name + Word('~').suppress() + special
 variable_assignment = variable_assignment_echo | variable_assignment_silent
 
-special <<= literal | pattern | symbol | variable_access | variable_assignment
+modifier = Suppress('.') + Word(alphanums + '_')
+special <<= ((literal | pattern | symbol | variable_access) +
+             ZeroOrMore(modifier)) ^ variable_assignment ^ choices
 
 number = Word(nums) ^ Combine(Optional(Word(nums)) + '.' + Word(nums))
 weight = Suppress('^') + number
 
-word = Word(printables + ' ', exclude_chars='[]')
-text = Combine(ZeroOrMore(word))
-token <<= text | block
-rule = OneOrMore(token) + Optional(weight) + StringEnd()  # FIXME infinite loop
+unquoted_token <<= (unquoted_text | block).leave_whitespace()
+token = (text | block).leave_whitespace()
+
+rule = OneOrMore(token) + Optional(weight) + StringEnd()
 
 
 # Matches the name of a generator to import when parsing a grammar
