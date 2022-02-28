@@ -30,6 +30,7 @@ import typing
 from pyparsing import (Combine,
                        Forward,
                        Group,
+                       Literal,
                        OneOrMore,
                        Optional,
                        StringEnd,
@@ -48,38 +49,207 @@ try:
 except ImportError:
     INFLECT = None
 
+
+class Token:
+    pass
+
+
+class LiteralToken(Token):
+    def __init__(self, string, modifiers):
+        self.string = string
+        self.modifiers = modifiers
+
+    def __str__(self):
+        string_term = f"'{self.string}'"
+        terms = [string_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'LiteralToken(string={repr(self.string)}, '
+                f'modifiers={self.modifiers})')
+
+
+class PatternToken(Token):
+    def __init__(self, tokens, modifiers):
+        self.tokens = tokens
+        self.modifiers = modifiers
+
+    def __str__(self):
+        token_term = f'"{join_as_strings(self.tokens)}"'
+        terms = [token_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'PatternToken(tokens={self.tokens}, '
+                f'modifiers={self.modifiers})')
+
+
+class RangeToken(Token):
+    def __init__(self, range_value, char, modifiers):
+        self.range = range_value
+        self.char = char
+        self.modifiers = modifiers
+
+    @property
+    def start(self):
+        if self.char:
+            return chr(self.range.start)
+        return self.range.start
+
+    @property
+    def stop(self):
+        if self.char:
+            return chr(self.range.stop - 1)
+        return self.range.stop - 1
+
+    def __str__(self):
+        range_term = f'{self.start}-{self.stop}'
+        terms = [range_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'RangeToken(range={self.range}, '
+                f'modifiers={self.modifiers})')
+
+
+class SymbolToken(Token):
+    def __init__(self, symbol, modifiers):
+        self.symbol = symbol
+        self.modifiers = modifiers
+
+    def __str__(self):
+        symbol_term = join_as_strings(self.symbol)
+        terms = [symbol_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'SymbolToken(symbol="{self.symbol}", '
+                f'modifiers={self.modifiers})')
+
+
+class VariableToken(Token):
+    def __init__(self, variable, modifiers):
+        self.variable = variable
+        self.modifiers = modifiers
+
+    def __str__(self):
+        variable_term = self.variable
+        terms = [variable_term] + self.modifiers
+        return f"[${'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'VariableToken(variable="{self.variable}", '
+                f'modifiers={self.modifiers})')
+
+
+class AssignmentToken(Token):
+    def __init__(self, variable, value, echo):
+        self.variable = variable
+        self.value = value
+        self.echo = echo
+
+    def __str__(self):
+        operator = '=' if self.echo else '~'
+        return (f'[{join_as_strings(self.variable)}{operator}'
+                f'{join_as_strings(self.value)}]')
+
+    def __repr__(self):
+        return (f'AssignmentToken(variable="{self.variable}", '
+                f'value={self.value}, '
+                f'echo={self.echo})')
+
+
+class ChoiceToken(Token):
+    def __init__(self, rules):
+        self.rules = rules
+
+    def __str__(self):
+        return f'[{join_as_strings(self.rules, delimiter="|")}]'
+
+    def __repr__(self):
+        return f'ChoiceToken(rules={self.rules})'
+
+
+def word_excluding(exclude_chars):
+    return Word(printables + ' ',
+                exclude_chars=exclude_chars).leave_whitespace()
+
+
+def parse_literal(toks):
+    return LiteralToken(toks[0], [])
+
+
+def parse_symbol(toks):
+    return SymbolToken(toks[0], [])
+
+
+def parse_variable(toks):
+    return VariableToken(toks[0], [])
+
+
+def parse_assignment_echo(toks):
+    return AssignmentToken(toks[0], toks[1:], echo=True)
+
+
+def parse_assignment_silent(toks):
+    return AssignmentToken(toks[0], toks[1:], echo=False)
+
+
+# TODO parse choices as rules
+def parse_choices(toks):
+    return ChoiceToken(list(toks))
+
+
+def parse_modifiers(toks):
+    toks[0].modifiers = toks[1:]
+    return toks[0]
+
+
 # Parser expressions
 E_SPECIAL = Forward()
+
 E_BLOCK = Suppress('[') + Group(E_SPECIAL) + Suppress(']')
 
-E_UNQUOTED_WORD = Word(printables + ' ',
-                       exclude_chars='"[]').leave_whitespace()
-E_UNQUOTED_TEXT = (Combine(OneOrMore(E_UNQUOTED_WORD))).leave_whitespace()
+E_UNQUOTED_TEXT = Combine(OneOrMore(word_excluding('"[]'))).leave_whitespace()
 E_UNQUOTED_TOKEN = Forward()
 
-E_WORD = Word(printables + ' ', exclude_chars='[]').leave_whitespace()
-E_TEXT = Combine(OneOrMore(E_WORD)).leave_whitespace()
+E_TEXT = Combine(OneOrMore(word_excluding('[]'))).leave_whitespace()
 
 E_LITERAL = sgl_quoted_string.set_parse_action(remove_quotes)
+E_LITERAL.add_parse_action(parse_literal)
+
 E_PATTERN = Suppress('"') + Group(OneOrMore(E_UNQUOTED_TOKEN)) + Suppress('"')
+# TODO parse patterns with new PatternToken
+
+# TODO parse ranges
 
 E_SYMBOL = Word(alphanums + '_')
+E_SYMBOL.add_parse_action(parse_symbol)
+
 E_VARIABLE_NAME = Word(alphanums + '_')
 E_VARIABLE_ACCESS = Suppress('$') + E_VARIABLE_NAME
-E_CHOICE_WORD = Word(printables + ' ', exclude_chars='|[]').leave_whitespace()
-E_CHOICE = Combine(OneOrMore(E_CHOICE_WORD)).leave_whitespace() ^ E_BLOCK
-E_CHOICES = (E_CHOICE.leave_whitespace()
-             + OneOrMore(Suppress('|') + E_CHOICE.leave_whitespace()))
+E_VARIABLE_ACCESS.add_parse_action(parse_variable)
 
-E_ASSIGNMENT_ECHO = E_VARIABLE_NAME + Word('=').suppress() + E_SPECIAL
-E_ASSIGNMENT_SILENT = E_VARIABLE_NAME + Word('~').suppress() + E_SPECIAL
+E_ASSIGNMENT_ECHO = E_VARIABLE_NAME + Literal('=').suppress() + E_SPECIAL
+E_ASSIGNMENT_ECHO.add_parse_action(parse_assignment_echo)
+E_ASSIGNMENT_SILENT = E_VARIABLE_NAME + Literal('~').suppress() + E_SPECIAL
+E_ASSIGNMENT_SILENT.add_parse_action(parse_assignment_silent)
 E_ASSIGNMENT = E_ASSIGNMENT_ECHO | E_ASSIGNMENT_SILENT
 
-E_MODIFIER = Suppress('.') + Word(alphanums + '_')
-E_SPECIAL <<= ((E_LITERAL | E_PATTERN | E_SYMBOL | E_VARIABLE_ACCESS) +
-               ZeroOrMore(E_MODIFIER)) ^ E_ASSIGNMENT ^ E_CHOICES
+E_CHOICE_WORD = word_excluding('|[]').leave_whitespace()
+E_CHOICE = Combine(OneOrMore(E_CHOICE_WORD)).leave_whitespace() | E_BLOCK
+E_CHOICES = (E_CHOICE.leave_whitespace()
+             + OneOrMore(Suppress('|') + E_CHOICE.leave_whitespace()))
+E_CHOICES.add_parse_action(parse_choices)
 
-E_NUMBER = Word(nums) ^ Combine(Optional(Word(nums)) + '.' + Word(nums))
+E_MODIFIER = Suppress('.') + Word(alphanums + '_')
+E_MODDED = ((E_LITERAL | E_PATTERN | E_SYMBOL | E_VARIABLE_ACCESS)
+            + ZeroOrMore(E_MODIFIER))
+E_MODDED.add_parse_action(parse_modifiers)
+
+E_SPECIAL <<= E_MODDED | E_ASSIGNMENT | E_CHOICES
+
+E_NUMBER = Word(nums) | Combine(Optional(Word(nums)) + '.' + Word(nums))
 E_WEIGHT = Suppress('^') + E_NUMBER
 
 E_UNQUOTED_TOKEN <<= (E_UNQUOTED_TEXT | E_BLOCK).leave_whitespace()
@@ -201,109 +371,6 @@ class MayhapGrammarError(MayhapError):
     def print(self):
         print(f'ERROR (line {self.number}): {self.message}', file=stderr)
         print(self.line, file=stderr)
-
-
-class Token:
-    pass
-
-
-class LiteralToken(Token):
-    def __init__(self, string, modifiers):
-        self.string = string
-        self.modifiers = modifiers
-
-    def __str__(self):
-        string_term = f"'{self.string}'"
-        terms = [string_term] + self.modifiers
-        return f"[{'.'.join(terms)}]"
-
-    def __repr__(self):
-        return (f'LiteralToken(string={repr(self.string)}, '
-                f'modifiers={self.modifiers})')
-
-
-class RangeToken(Token):
-    def __init__(self, range_value, char, modifiers):
-        self.range = range_value
-        self.char = char
-        self.modifiers = modifiers
-
-    @property
-    def start(self):
-        if self.char:
-            return chr(self.range.start)
-        return self.range.start
-
-    @property
-    def stop(self):
-        if self.char:
-            return chr(self.range.stop - 1)
-        return self.range.stop - 1
-
-    def __str__(self):
-        range_term = f'{self.start}-{self.stop}'
-        terms = [range_term] + self.modifiers
-        return f"[{'.'.join(terms)}]"
-
-    def __repr__(self):
-        return (f'RangeToken(range={self.range}, '
-                f'modifiers={self.modifiers})')
-
-
-class SymbolToken(Token):
-    def __init__(self, symbol, modifiers):
-        self.symbol = symbol
-        self.modifiers = modifiers
-
-    def __str__(self):
-        symbol_term = join_as_strings(self.symbol)
-        terms = [symbol_term] + self.modifiers
-        return f"[{'.'.join(terms)}]"
-
-    def __repr__(self):
-        return (f'SymbolToken(symbol={self.symbol}, '
-                f'modifiers={self.modifiers})')
-
-
-class VariableToken(Token):
-    def __init__(self, variable, modifiers):
-        self.variable = variable
-        self.modifiers = modifiers
-
-    def __str__(self):
-        return f'[${join_as_strings(self.variable)}]'
-
-    def __repr__(self):
-        return (f'VariableToken(variable={self.variable}, '
-                f'modifiers={self.modifiers})')
-
-
-class AssignmentToken(Token):
-    def __init__(self, variable, value, echo):
-        self.variable = variable
-        self.value = value
-        self.echo = echo
-
-    def __str__(self):
-        operator = '=' if self.echo else '~'
-        return (f'[{join_as_strings(self.variable)}{operator}'
-                f'{join_as_strings(self.value)}]')
-
-    def __repr__(self):
-        return (f'AssignmentToken(variable={self.variable}, '
-                f'value={self.value}, '
-                f'echo={self.echo})')
-
-
-class ChoiceToken(Token):
-    def __init__(self, rules):
-        self.rules = rules
-
-    def __str__(self):
-        return f'[{join_as_strings(self.rules, delimiter="|")}]'
-
-    def __repr__(self):
-        return f'ChoiceToken(rules={self.rules})'
 
 
 def parse_modifiers(block):
