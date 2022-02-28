@@ -25,14 +25,57 @@ import re
 import sys
 from sys import stderr, stdin
 from traceback import format_exc
-from typing import Optional
+import typing
 
+from pyparsing import (Combine,
+                       Forward,
+                       Group,
+                       OneOrMore,
+                       Optional,
+                       StringEnd,
+                       Suppress,
+                       Word,
+                       ZeroOrMore,
+                       alphanums,
+                       dbl_quoted_string,
+                       nums,
+                       printables,
+                       remove_quotes,
+                       sgl_quoted_string)
 
 try:
     import inflect
-    INFLECT: Optional[inflect.engine] = inflect.engine()
+    INFLECT: typing.Optional[inflect.engine] = inflect.engine()
 except ImportError:
     INFLECT = None
+
+special = Forward()
+modifier = Suppress('.') + Word(alphanums + '_')
+block = Suppress('[') + Group(special) + ZeroOrMore(modifier) + Suppress(']')
+# FIXME infinite loop
+# FIXME can't parse variable assignments
+
+token = Forward()
+literal = sgl_quoted_string.set_parse_action(remove_quotes)
+pattern = Suppress('"') + Group(OneOrMore(token)) + Suppress('"')
+# FIXME infinite loop
+
+symbol = Word(alphanums + '_')  # FIXME matches first word of multi-word string
+variable_name = Word(alphanums + '_')
+variable_access = Suppress('$') + variable_name
+variable_assignment_echo = variable_name + Word('=').suppress() + special
+variable_assignment_silent = variable_name + Word('~').suppress() + special
+variable_assignment = variable_assignment_echo | variable_assignment_silent
+
+special <<= literal | pattern | symbol | variable_access | variable_assignment
+
+number = Word(nums) ^ Combine(Optional(Word(nums)) + '.' + Word(nums))
+weight = Suppress('^') + number
+
+word = Word(printables + ' ', exclude_chars='[]')
+text = Combine(ZeroOrMore(word))
+token <<= text | block
+rule = OneOrMore(token) + Optional(weight) + StringEnd()  # FIXME infinite loop
 
 
 # Matches the name of a generator to import when parsing a grammar
