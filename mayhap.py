@@ -37,7 +37,6 @@ from pyparsing import (Combine,
                        Word,
                        ZeroOrMore,
                        alphanums,
-                       dbl_quoted_string,
                        nums,
                        printables,
                        remove_quotes,
@@ -49,41 +48,44 @@ try:
 except ImportError:
     INFLECT = None
 
-special = Forward()
-block = Suppress('[') + Group(special) + Suppress(']')
+# Parser expressions
+E_SPECIAL = Forward()
+E_BLOCK = Suppress('[') + Group(E_SPECIAL) + Suppress(']')
 
-unquoted_text = (Combine(OneOrMore(
-    Word(printables + ' ', exclude_chars='"[]')))).leave_whitespace()
-unquoted_token = Forward()
+E_UNQUOTED_WORD = Word(printables + ' ',
+                       exclude_chars='"[]').leave_whitespace()
+E_UNQUOTED_TEXT = (Combine(OneOrMore(E_UNQUOTED_WORD))).leave_whitespace()
+E_UNQUOTED_TOKEN = Forward()
 
-text = Combine(OneOrMore(
-    Word(printables + ' ', exclude_chars='[]'))).leave_whitespace()
+E_WORD = Word(printables + ' ', exclude_chars='[]').leave_whitespace()
+E_TEXT = Combine(OneOrMore(E_WORD)).leave_whitespace()
 
-literal = sgl_quoted_string.set_parse_action(remove_quotes)
-pattern = Suppress('"') + Group(OneOrMore(unquoted_token)) + Suppress('"')
+E_LITERAL = sgl_quoted_string.set_parse_action(remove_quotes)
+E_PATTERN = Suppress('"') + Group(OneOrMore(E_UNQUOTED_TOKEN)) + Suppress('"')
 
-symbol = Word(alphanums + '_')
-variable_name = Word(alphanums + '_')
-variable_access = Suppress('$') + variable_name
-choice = (Combine(OneOrMore(Word(printables + ' ', exclude_chars='|[]'))) ^
-          block)
-choices = choice + OneOrMore(Suppress('|') + choice)
+E_SYMBOL = Word(alphanums + '_')
+E_VARIABLE_NAME = Word(alphanums + '_')
+E_VARIABLE_ACCESS = Suppress('$') + E_VARIABLE_NAME
+E_CHOICE_WORD = Word(printables + ' ', exclude_chars='|[]').leave_whitespace()
+E_CHOICE = Combine(OneOrMore(E_CHOICE_WORD)).leave_whitespace() ^ E_BLOCK
+E_CHOICES = (E_CHOICE.leave_whitespace()
+             + OneOrMore(Suppress('|') + E_CHOICE.leave_whitespace()))
 
-variable_assignment_echo = variable_name + Word('=').suppress() + special
-variable_assignment_silent = variable_name + Word('~').suppress() + special
-variable_assignment = variable_assignment_echo | variable_assignment_silent
+E_ASSIGNMENT_ECHO = E_VARIABLE_NAME + Word('=').suppress() + E_SPECIAL
+E_ASSIGNMENT_SILENT = E_VARIABLE_NAME + Word('~').suppress() + E_SPECIAL
+E_ASSIGNMENT = E_ASSIGNMENT_ECHO | E_ASSIGNMENT_SILENT
 
-modifier = Suppress('.') + Word(alphanums + '_')
-special <<= ((literal | pattern | symbol | variable_access) +
-             ZeroOrMore(modifier)) ^ variable_assignment ^ choices
+E_MODIFIER = Suppress('.') + Word(alphanums + '_')
+E_SPECIAL <<= ((E_LITERAL | E_PATTERN | E_SYMBOL | E_VARIABLE_ACCESS) +
+               ZeroOrMore(E_MODIFIER)) ^ E_ASSIGNMENT ^ E_CHOICES
 
-number = Word(nums) ^ Combine(Optional(Word(nums)) + '.' + Word(nums))
-weight = Suppress('^') + number
+E_NUMBER = Word(nums) ^ Combine(Optional(Word(nums)) + '.' + Word(nums))
+E_WEIGHT = Suppress('^') + E_NUMBER
 
-unquoted_token <<= (unquoted_text | block).leave_whitespace()
-token = (text | block).leave_whitespace()
+E_UNQUOTED_TOKEN <<= (E_UNQUOTED_TEXT | E_BLOCK).leave_whitespace()
+E_TOKEN = (E_TEXT | E_BLOCK).leave_whitespace()
 
-rule = OneOrMore(token) + Optional(weight) + StringEnd()
+E_RULE = OneOrMore(E_TOKEN) + Optional(E_WEIGHT) + StringEnd()
 
 
 # Matches the name of a generator to import when parsing a grammar
