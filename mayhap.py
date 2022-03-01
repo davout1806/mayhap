@@ -169,7 +169,8 @@ class LiteralToken(Token):
                 f'modifiers={self.modifiers})')
 
     def __eq__(self, other):
-        return (self.string == other.string and
+        return (isinstance(other, LiteralToken) and
+                self.string == other.string and
                 self.modifiers == other.modifiers)
 
 
@@ -188,7 +189,8 @@ class PatternToken(Token):
                 f'modifiers={self.modifiers})')
 
     def __eq__(self, other):
-        return (self.tokens == other.tokens and
+        return (isinstance(other, PatternToken) and
+                self.tokens == other.tokens and
                 self.modifiers == other.modifiers)
 
 
@@ -220,7 +222,8 @@ class RangeToken(Token):
                 f'modifiers={self.modifiers})')
 
     def __eq__(self, other):
-        return (self.range == other.range and
+        return (isinstance(other, RangeToken) and
+                self.range == other.range and
                 self.alpha == other.alpha and
                 self.modifiers == other.modifiers)
 
@@ -236,11 +239,12 @@ class SymbolToken(Token):
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
-        return (f'SymbolToken(symbol={self.symbol}, '
+        return (f'SymbolToken(symbol="{self.symbol}", '
                 f'modifiers={self.modifiers})')
 
     def __eq__(self, other):
-        return (self.symbol == other.symbol and
+        return (isinstance(other, SymbolToken) and
+                self.symbol == other.symbol and
                 self.modifiers == other.modifiers)
 
 
@@ -253,11 +257,12 @@ class VariableToken(Token):
         return f'[${join_as_strings(self.variable)}]'
 
     def __repr__(self):
-        return (f'VariableToken(variable={self.variable}, '
+        return (f'VariableToken(variable="{self.variable}", '
                 f'modifiers={self.modifiers})')
 
     def __eq__(self, other):
-        return (self.variable == other.variable and
+        return (isinstance(other, VariableToken) and
+                self.variable == other.variable and
                 self.modifiers == other.modifiers)
 
 
@@ -278,7 +283,8 @@ class AssignmentToken(Token):
                 f'echo={self.echo})')
 
     def __eq__(self, other):
-        return (self.variable == other.variable and
+        return (isinstance(other, AssignmentToken) and
+                self.variable == other.variable and
                 self.value == other.value and
                 self.echo == other.echo)
 
@@ -294,7 +300,8 @@ class ChoiceToken(Token):
         return f'ChoiceToken(rules={self.rules})'
 
     def __eq__(self, other):
-        return (self.rules == other.rules)
+        return (isinstance(other, ChoiceToken) and
+                self.rules == other.rules)
 
 
 def parse_modifiers(block):
@@ -479,7 +486,8 @@ class Rule:
         return f'Rule(tokens={self.tokens}, weight={self.weight})'
 
     def __eq__(self, other):
-        return (self.tokens == other.tokens and
+        return (isinstance(other, Rule) and
+                self.tokens == other.tokens and
                 self.weight == other.weight)
 
 
