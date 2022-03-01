@@ -155,9 +155,9 @@ class Token:
 
 
 class LiteralToken(Token):
-    def __init__(self, string, modifiers):
+    def __init__(self, string, modifiers=None):
         self.string = string
-        self.modifiers = modifiers
+        self.modifiers = modifiers if modifiers else []
 
     def __str__(self):
         string_term = f"'{self.string}'"
@@ -168,22 +168,45 @@ class LiteralToken(Token):
         return (f'LiteralToken(string={repr(self.string)}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (self.string == other.string and
+                self.modifiers == other.modifiers)
+
+
+class PatternToken(Token):
+    def __init__(self, tokens, modifiers=None):
+        self.tokens = tokens
+        self.modifiers = modifiers if modifiers else []
+
+    def __str__(self):
+        token_term = f'"{join_as_strings(self.tokens)}"'
+        terms = [token_term] + self.modifiers
+        return f"[{'.'.join(terms)}]"
+
+    def __repr__(self):
+        return (f'PatternToken(tokens={self.tokens}, '
+                f'modifiers={self.modifiers})')
+
+    def __eq__(self, other):
+        return (self.tokens == other.tokens and
+                self.modifiers == other.modifiers)
+
 
 class RangeToken(Token):
-    def __init__(self, range_value, char, modifiers):
+    def __init__(self, range_value, alpha, modifiers=None):
         self.range = range_value
-        self.char = char
-        self.modifiers = modifiers
+        self.alpha = alpha
+        self.modifiers = modifiers if modifiers else []
 
     @property
     def start(self):
-        if self.char:
+        if self.alpha:
             return chr(self.range.start)
         return self.range.start
 
     @property
     def stop(self):
-        if self.char:
+        if self.alpha:
             return chr(self.range.stop - 1)
         return self.range.stop - 1
 
@@ -196,11 +219,16 @@ class RangeToken(Token):
         return (f'RangeToken(range={self.range}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (self.range == other.range and
+                self.alpha == other.alpha and
+                self.modifiers == other.modifiers)
+
 
 class SymbolToken(Token):
-    def __init__(self, symbol, modifiers):
+    def __init__(self, symbol, modifiers=None):
         self.symbol = symbol
-        self.modifiers = modifiers
+        self.modifiers = modifiers if modifiers else []
 
     def __str__(self):
         symbol_term = join_as_strings(self.symbol)
@@ -211,11 +239,15 @@ class SymbolToken(Token):
         return (f'SymbolToken(symbol={self.symbol}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (self.symbol == other.symbol and
+                self.modifiers == other.modifiers)
+
 
 class VariableToken(Token):
-    def __init__(self, variable, modifiers):
+    def __init__(self, variable, modifiers=None):
         self.variable = variable
-        self.modifiers = modifiers
+        self.modifiers = modifiers if modifiers else []
 
     def __str__(self):
         return f'[${join_as_strings(self.variable)}]'
@@ -223,6 +255,10 @@ class VariableToken(Token):
     def __repr__(self):
         return (f'VariableToken(variable={self.variable}, '
                 f'modifiers={self.modifiers})')
+
+    def __eq__(self, other):
+        return (self.variable == other.variable and
+                self.modifiers == other.modifiers)
 
 
 class AssignmentToken(Token):
@@ -241,6 +277,11 @@ class AssignmentToken(Token):
                 f'value={self.value}, '
                 f'echo={self.echo})')
 
+    def __eq__(self, other):
+        return (self.variable == other.variable and
+                self.value == other.value and
+                self.echo == other.echo)
+
 
 class ChoiceToken(Token):
     def __init__(self, rules):
@@ -251,6 +292,9 @@ class ChoiceToken(Token):
 
     def __repr__(self):
         return f'ChoiceToken(rules={self.rules})'
+
+    def __eq__(self, other):
+        return (self.rules == other.rules)
 
 
 def parse_modifiers(block):
@@ -313,7 +357,7 @@ def tokenize_block(block):
             block[-1] == LITERAL_END):
         if len(block) == 2:
             return []
-        return [block[1:-1]]
+        return [LiteralToken(block[1:-1])]
 
     choices = block.split('|')
     if len(choices) > 1:
@@ -325,7 +369,7 @@ def tokenize_block(block):
             block[-1] == PATTERN_START):
         if len(block) == 2:
             return []
-        return tokenize_pattern(block[1:-1])
+        return [PatternToken(tokenize_pattern(block[1:-1]))]
 
     assignment = False
     match = RE_ASSIGNMENT_SILENT.match(block)
@@ -339,11 +383,11 @@ def tokenize_block(block):
             echo = True
 
     if assignment:
-        variable_pattern = match[1].strip()
-        variable_tokens = tokenize_pattern(variable_pattern)
+        # Parse the variable as a pattern to allow for "eval"
+        variable = match[1].strip()
         value_block = match[2].strip()
         value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable_tokens, value_tokens, echo)]
+        return [AssignmentToken(variable, value_tokens, echo)]
 
     block = block.strip()
     content, modifiers = parse_modifiers(block)
@@ -352,14 +396,14 @@ def tokenize_block(block):
     is_range = False
     if match:
         is_range = True
-        char = False
+        alpha = False
         bound1 = int(match[1])
         bound2 = int(match[2])
     else:
         match = RE_RANGE_ALPHA.match(content)
         if match:
             is_range = True
-            char = True
+            alpha = True
             if match[1].isupper() != match[2].isupper():
                 raise MayhapError(f'Range bounds ({match[1]} and {match[2]}) '
                                   'must have the same case')
@@ -370,22 +414,22 @@ def tokenize_block(block):
         start = min(bound1, bound2)
         stop = max(bound1, bound2) + 1
         token_range = range(start, stop)
-        return [RangeToken(token_range, char, modifiers)]
+        return [RangeToken(token_range, alpha, modifiers)]
 
     match = RE_VARIABLE.match(content)
     if match:
-        variable_pattern = match[1].strip()
-        variable_tokens = tokenize_pattern(variable_pattern)
-        return [VariableToken(variable_tokens, modifiers)]
+        # Parse the variable as a pattern to allow for "eval"
+        variable = match[1].strip()
+        return [VariableToken(variable, modifiers)]
 
     # Assume this is a symbol
-    symbol_pattern = content
-    symbol_tokens = tokenize_pattern(symbol_pattern)
-    return [SymbolToken(symbol_tokens, modifiers)]
+    # Parse the symbol as a pattern to allow for "eval"
+    symbol = content
+    return [SymbolToken(symbol, modifiers)]
 
 
 class Rule:
-    def __init__(self, tokens, weight):
+    def __init__(self, tokens, weight=DEFAULT_WEIGHT):
         self.tokens = tokens
         self.weight = weight
 
@@ -433,6 +477,10 @@ class Rule:
 
     def __repr__(self):
         return f'Rule(tokens={self.tokens}, weight={self.weight})'
+
+    def __eq__(self, other):
+        return (self.tokens == other.tokens and
+                self.weight == other.weight)
 
 
 def import_grammar(import_file_name):
@@ -678,7 +726,7 @@ class Generator:
             return self.evaluate_tokens(rule.tokens, depth=depth + 1)
 
         if isinstance(token, AssignmentToken):
-            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            variable = token.variable
             value = self.evaluate_tokens(token.value, depth=depth + 1)
             self.log(tokens=[AssignmentToken(variable, value, token.echo)],
                      depth=depth)
@@ -689,7 +737,7 @@ class Generator:
             string = token.string
         elif isinstance(token, RangeToken):
             choice = random.choice(token.range)
-            if token.char:
+            if token.alpha:
                 string = chr(choice)
             else:
                 string = str(choice)
@@ -698,7 +746,7 @@ class Generator:
             rule = self.produce(symbol)
             string = self.evaluate_tokens(rule.tokens, depth=depth + 1)
         elif isinstance(token, VariableToken):
-            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            variable = token.variable
             value = self.variables.get(variable)
             if value is None:
                 raise MayhapError(f'Variable "{variable}" not found')
