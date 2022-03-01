@@ -29,7 +29,6 @@ import typing
 
 from pyparsing import (Combine,
                        Forward,
-                       Group,
                        Literal,
                        OneOrMore,
                        Optional,
@@ -38,6 +37,7 @@ from pyparsing import (Combine,
                        Word,
                        ZeroOrMore,
                        alphanums,
+                       alphas,
                        nums,
                        printables,
                        remove_quotes,
@@ -85,20 +85,20 @@ class PatternToken(Token):
 
 
 class RangeToken(Token):
-    def __init__(self, range_value, char, modifiers):
+    def __init__(self, range_value, alpha, modifiers):
         self.range = range_value
-        self.char = char
+        self.alpha = alpha
         self.modifiers = modifiers
 
     @property
     def start(self):
-        if self.char:
+        if self.alpha:
             return chr(self.range.start)
         return self.range.start
 
     @property
     def stop(self):
-        if self.char:
+        if self.alpha:
             return chr(self.range.stop - 1)
         return self.range.stop - 1
 
@@ -176,7 +176,27 @@ def word_excluding(exclude_chars):
 
 
 def parse_literal(toks):
-    return LiteralToken(toks[0], [])
+    return LiteralToken(toks[0], modifiers=[])
+
+
+def parse_pattern(toks):
+    return PatternToken(list(toks), modifiers=[])
+
+
+def parse_range_num(toks):
+    bound1 = int(toks[0])
+    bound2 = int(toks[1])
+    start = min(bound1, bound2)
+    stop = max(bound1, bound2) + 1
+    return RangeToken(range(start, stop), alpha=False, modifiers=[])
+
+
+def parse_range_alpha(toks):
+    bound1 = ord(toks[0])
+    bound2 = ord(toks[1])
+    start = min(bound1, bound2)
+    stop = max(bound1, bound2) + 1
+    return RangeToken(range(start, stop), alpha=True, modifiers=[])
 
 
 def parse_symbol(toks):
@@ -188,11 +208,11 @@ def parse_variable(toks):
 
 
 def parse_assignment_echo(toks):
-    return AssignmentToken(toks[0], toks[1:], echo=True)
+    return AssignmentToken(toks[0], list(toks[1:]), echo=True)
 
 
 def parse_assignment_silent(toks):
-    return AssignmentToken(toks[0], toks[1:], echo=False)
+    return AssignmentToken(toks[0], list(toks[1:]), echo=False)
 
 
 # TODO parse choices as rules
@@ -201,14 +221,14 @@ def parse_choices(toks):
 
 
 def parse_modifiers(toks):
-    toks[0].modifiers = toks[1:]
+    toks[0].modifiers = list(toks[1:])
     return toks[0]
 
 
 # Parser expressions
 E_SPECIAL = Forward()
 
-E_BLOCK = Suppress('[') + Group(E_SPECIAL) + Suppress(']')
+E_BLOCK = Suppress('[') + E_SPECIAL + Suppress(']')
 
 E_UNQUOTED_TEXT = Combine(OneOrMore(word_excluding('"[]'))).leave_whitespace()
 E_UNQUOTED_TOKEN = Forward()
@@ -218,10 +238,16 @@ E_TEXT = Combine(OneOrMore(word_excluding('[]'))).leave_whitespace()
 E_LITERAL = sgl_quoted_string.set_parse_action(remove_quotes)
 E_LITERAL.add_parse_action(parse_literal)
 
-E_PATTERN = Suppress('"') + Group(OneOrMore(E_UNQUOTED_TOKEN)) + Suppress('"')
-# TODO parse patterns with new PatternToken
+E_PATTERN = Suppress('"') + OneOrMore(E_UNQUOTED_TOKEN) + Suppress('"')
+E_PATTERN.add_parse_action(parse_pattern)
 
-# TODO parse ranges
+E_RANGE_NUM = Word(nums) + Suppress('-') + Word(nums)
+E_RANGE_NUM.add_parse_action(parse_range_num)
+
+E_RANGE_ALPHA = Word(alphas, exact=1) + Suppress('-') + Word(alphas, exact=1)
+E_RANGE_ALPHA.add_parse_action(parse_range_alpha)
+
+E_RANGE = E_RANGE_NUM | E_RANGE_ALPHA
 
 E_SYMBOL = Word(alphanums + '_')
 E_SYMBOL.add_parse_action(parse_symbol)
@@ -243,7 +269,7 @@ E_CHOICES = (E_CHOICE.leave_whitespace()
 E_CHOICES.add_parse_action(parse_choices)
 
 E_MODIFIER = Suppress('.') + Word(alphanums + '_')
-E_MODDED = ((E_LITERAL | E_PATTERN | E_SYMBOL | E_VARIABLE_ACCESS)
+E_MODDED = ((E_LITERAL | E_PATTERN | E_RANGE | E_SYMBOL | E_VARIABLE_ACCESS)
             + ZeroOrMore(E_MODIFIER))
 E_MODDED.add_parse_action(parse_modifiers)
 
@@ -472,14 +498,14 @@ def tokenize_block(block):
     is_range = False
     if match:
         is_range = True
-        char = False
+        alpha = False
         bound1 = int(match[1])
         bound2 = int(match[2])
     else:
         match = RE_RANGE_ALPHA.match(content)
         if match:
             is_range = True
-            char = True
+            alpha = True
             if match[1].isupper() != match[2].isupper():
                 raise MayhapError(f'Range bounds ({match[1]} and {match[2]}) '
                                   'must have the same case')
@@ -490,7 +516,7 @@ def tokenize_block(block):
         start = min(bound1, bound2)
         stop = max(bound1, bound2) + 1
         token_range = range(start, stop)
-        return [RangeToken(token_range, char, modifiers)]
+        return [RangeToken(token_range, alpha, modifiers)]
 
     match = RE_VARIABLE.match(content)
     if match:
@@ -809,7 +835,7 @@ class Generator:
             string = token.string
         elif isinstance(token, RangeToken):
             choice = random.choice(token.range)
-            if token.char:
+            if token.alpha:
                 string = chr(choice)
             else:
                 string = str(choice)
