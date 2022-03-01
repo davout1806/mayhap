@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import unittest
 
 from mayhap import (AssignmentToken,
@@ -104,7 +103,3 @@ class TestRule(unittest.TestCase):
         expected = Rule([ChoiceToken([Rule(['choice1']), Rule(['choice2'])])])
         actual = Rule.parse("[choice1|choice2]")
         self.assertEqual(expected, actual)
-
-
-if __name__ == '__main__':
-    unittest.main()
