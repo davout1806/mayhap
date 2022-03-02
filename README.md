@@ -44,6 +44,7 @@ Note that Mayhap is not affiliated with nor endorsed by Perchance, and merely ta
 
 If you want to submit a PR, please follow these guidelines:
 
-- Run the project on some samples to test for bugs.
+- Run `python3 -m unittest` to run the unit test suite.
+- Run `test/test_samples.sh` to run Mayhap on all samples.
 - Run some Python linters such as Pylint, flake8, and/or mypy to help ensure consistent code style and quality.
 - If you create any new Python source files, copy the license notice from `mayhap.py` into them.
