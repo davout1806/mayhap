@@ -2,7 +2,7 @@
 set -u
 export PATH='/bin:/usr/bin:/usr/local/bin'
 
-path=$(dirname "$(dirname "$0")")
+path=$(realpath "$(dirname "$0")/..")
 mayhap="$path/mayhap.py"
 samples="$path/samples"
 
@@ -35,8 +35,7 @@ echo "Ran $total tests in ${duration}s"
 echo
 if [ $failures -gt 0 ]; then
 	echo "FAILED (failures=$failures)"
-else
-	echo 'OK'
+	exit "$failures"
 fi
-
+echo 'OK'
 exit 0
