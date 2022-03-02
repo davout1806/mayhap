@@ -157,11 +157,11 @@ class Token:
 class LiteralToken(Token):
     def __init__(self, string, modifiers=None):
         self.string = string
-        self.modifiers = modifiers if modifiers else tuple()
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         string_term = f"'{self.string}'"
-        terms = [string_term] + self.modifiers
+        terms = (string_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
@@ -180,11 +180,11 @@ class LiteralToken(Token):
 class PatternToken(Token):
     def __init__(self, tokens, modifiers=None):
         self.tokens = tuple(tokens)
-        self.modifiers = modifiers if modifiers else tuple()
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         token_term = f'"{join_as_strings(self.tokens)}"'
-        terms = [token_term] + self.modifiers
+        terms = (token_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
@@ -204,7 +204,7 @@ class RangeToken(Token):
     def __init__(self, range_value, alpha, modifiers=None):
         self.range = range_value
         self.alpha = alpha
-        self.modifiers = modifiers if modifiers else tuple()
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     @property
     def start(self):
@@ -220,7 +220,7 @@ class RangeToken(Token):
 
     def __str__(self):
         range_term = f'{self.start}-{self.stop}'
-        terms = [range_term] + self.modifiers
+        terms = (range_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
@@ -240,11 +240,11 @@ class RangeToken(Token):
 class SymbolToken(Token):
     def __init__(self, symbol, modifiers=None):
         self.symbol = symbol
-        self.modifiers = modifiers if modifiers else tuple()
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         symbol_term = join_as_strings(self.symbol)
-        terms = [symbol_term] + self.modifiers
+        terms = (symbol_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
@@ -263,7 +263,7 @@ class SymbolToken(Token):
 class VariableToken(Token):
     def __init__(self, variable, modifiers=None):
         self.variable = variable
-        self.modifiers = modifiers if modifiers else tuple()
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         return f'[${join_as_strings(self.variable)}]'
@@ -768,6 +768,8 @@ class Generator:
 
         if isinstance(token, LiteralToken):
             string = token.string
+        elif isinstance(token, PatternToken):
+            string = self.evaluate_tokens(token.tokens, depth=depth + 1)
         elif isinstance(token, RangeToken):
             choice = random.choice(token.range)
             if token.alpha:
