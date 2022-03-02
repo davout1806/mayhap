@@ -50,7 +50,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a backslash-escaped weight: not a weight \\^2
         '''
-        expected = Rule(['not a weight \\^2'])
+        expected = Rule(['not a weight ^2'])
         actual = Rule.parse('not a weight \\^2')
         self.assertEqual(expected, actual)
 

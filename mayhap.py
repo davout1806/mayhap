@@ -32,7 +32,7 @@ from pyparsing import (Combine,
                        Literal,
                        OneOrMore,
                        Optional,
-                       StringEnd,
+                       ParseException,
                        Suppress,
                        Word,
                        ZeroOrMore,
@@ -225,6 +225,11 @@ class ChoiceToken(Token):
         return hash(self.rules)
 
 
+class Weight:
+    def __init__(self, weight):
+        self.weight = weight
+
+
 def word_excluding(exclude_chars):
     return Word(printables + ' ',
                 exclude_chars=exclude_chars).leave_whitespace()
@@ -270,9 +275,9 @@ def parse_assignment_silent(toks):
     return AssignmentToken(toks[0], tuple(toks[1:]), echo=False)
 
 
-# TODO parse choices as rules
 def parse_choices(toks):
-    return ChoiceToken(tuple(toks))
+    rules = [(rule if rule else Rule([])) for rule in toks]
+    return ChoiceToken(tuple(rules))
 
 
 def parse_modifiers(toks):
@@ -280,15 +285,27 @@ def parse_modifiers(toks):
     return toks[0]
 
 
+def parse_weight(toks):
+    return Weight(float(toks[0]))
+
+
+def parse_rule(toks):
+    if isinstance(toks[-1], Weight):
+        return Rule(toks[:-1], toks[-1].weight)
+    return Rule(toks)
+
+
 # Parser expressions
+E_NUMBER = Combine(Optional(Word(nums)) + '.' + Word(nums)) | Word(nums)
+E_WEIGHT = Suppress('^') + E_NUMBER
+E_WEIGHT.add_parse_action(parse_weight)
+
 E_SPECIAL = Forward()
 
 E_BLOCK = Suppress('[') + E_SPECIAL + Suppress(']')
 
 E_UNQUOTED_TEXT = Combine(OneOrMore(word_excluding('"[]'))).leave_whitespace()
 E_UNQUOTED_TOKEN = Forward()
-
-E_TEXT = Combine(OneOrMore(word_excluding('[]'))).leave_whitespace()
 
 E_LITERAL = sgl_quoted_string.set_parse_action(remove_quotes)
 E_LITERAL.add_parse_action(parse_literal)
@@ -317,10 +334,10 @@ E_ASSIGNMENT_SILENT = E_VARIABLE_NAME + Literal('~').suppress() + E_SPECIAL
 E_ASSIGNMENT_SILENT.add_parse_action(parse_assignment_silent)
 E_ASSIGNMENT = E_ASSIGNMENT_ECHO | E_ASSIGNMENT_SILENT
 
-E_CHOICE_WORD = word_excluding('|[]').leave_whitespace()
-E_CHOICE = Combine(OneOrMore(E_CHOICE_WORD)).leave_whitespace() | E_BLOCK
-E_CHOICES = (E_CHOICE.leave_whitespace()
-             + OneOrMore(Suppress('|') + E_CHOICE.leave_whitespace()))
+E_RULE = Forward()
+E_CHOICES = (Optional(E_RULE, default=None).leave_whitespace()
+             + OneOrMore(Suppress('|')
+                         + Optional(E_RULE, default=None).leave_whitespace()))
 E_CHOICES.add_parse_action(parse_choices)
 
 E_MODIFIER = Suppress('.') + Word(alphanums + '_')
@@ -328,15 +345,15 @@ E_MODDED = ((E_LITERAL | E_PATTERN | E_RANGE | E_SYMBOL | E_VARIABLE_ACCESS)
             + ZeroOrMore(E_MODIFIER))
 E_MODDED.add_parse_action(parse_modifiers)
 
-E_SPECIAL <<= E_MODDED | E_ASSIGNMENT | E_CHOICES
-
-E_NUMBER = Word(nums) | Combine(Optional(Word(nums)) + '.' + Word(nums))
-E_WEIGHT = Suppress('^') + E_NUMBER
+E_SPECIAL <<= E_ASSIGNMENT | E_CHOICES | E_MODDED
 
 E_UNQUOTED_TOKEN <<= (E_UNQUOTED_TEXT | E_BLOCK).leave_whitespace()
+
+E_TEXT = Combine(OneOrMore(word_excluding('|^[]'))).leave_whitespace()
 E_TOKEN = (E_TEXT | E_BLOCK).leave_whitespace()
 
-E_RULE = OneOrMore(E_TOKEN) + Optional(E_WEIGHT) + StringEnd()
+E_RULE <<= ZeroOrMore(E_TOKEN) + Optional(E_WEIGHT)
+E_RULE.add_parse_action(parse_rule)
 
 
 # Matches the name of a generator to import when parsing a grammar
@@ -454,159 +471,20 @@ class MayhapGrammarError(MayhapError):
         print(self.line, file=stderr)
 
 
-def tokenize_pattern(pattern):
-    tokens = []
-    stack = []
-    literal_start = 0
-    i = 0
-    while i < len(pattern):
-        # If a block starts here, push its start index on the stack
-        if pattern[i] == BLOCK_START:
-            # If is top-level block, add the literal that was just traversed
-            if not stack and i != literal_start:
-                tokens.append(pattern[literal_start:i])
-            stack.append(i)
-
-        # If a block ends here, pop its start index off the stack
-        elif pattern[i] == BLOCK_END:
-            if not stack:
-                raise MayhapError(f'Unmatched end of block at column {i}')
-
-            start = stack.pop()
-            # If this is a top-level block, tokenize it
-            if not stack:
-                end = i
-                block_pattern = pattern[start + 1:end]
-                block_tokens = tokenize_block(block_pattern)
-                for token in block_tokens:
-                    tokens.append(token)
-                literal_start = i + 1
-
-        i += 1
-
-    if stack:
-        raise MayhapError(f'Unclosed block starting at column {stack[0]}')
-
-    if i != literal_start:
-        tokens.append(pattern[literal_start:i])
-
-    return tokens
-
-
-def tokenize_block(block):
-    if not block:
-        return Token()
-
-    if (len(block) >= 2 and
-            block[0] == LITERAL_START and
-            block[-1] == LITERAL_END):
-        if len(block) == 2:
-            return []
-        return [LiteralToken(block[1:-1])]
-
-    choices = block.split('|')
-    if len(choices) > 1:
-        rules = [Rule.parse(rule) for rule in choices]
-        return [ChoiceToken(rules)]
-
-    if (len(block) >= 2 and
-            block[0] == PATTERN_START and
-            block[-1] == PATTERN_START):
-        if len(block) == 2:
-            return []
-        tokens = tokenize_pattern(block[1:-1])
-        return [PatternToken(tokens)]
-
-    assignment = False
-    match = RE_ASSIGNMENT_SILENT.match(block)
-    if match:
-        assignment = True
-        echo = False
-    else:
-        match = RE_ASSIGNMENT_ECHOED.match(block)
-        if match:
-            assignment = True
-            echo = True
-
-    if assignment:
-        # Parse the variable as a pattern to allow for "eval"
-        variable = match[1].strip()
-        value_block = match[2].strip()
-        value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable, value_tokens, echo)]
-
-    block = block.strip()
-    content, modifiers = parse_modifiers(block)
-
-    match = RE_RANGE_NUMERIC.match(content)
-    is_range = False
-    if match:
-        is_range = True
-        alpha = False
-        bound1 = int(match[1])
-        bound2 = int(match[2])
-    else:
-        match = RE_RANGE_ALPHA.match(content)
-        if match:
-            is_range = True
-            alpha = True
-            if match[1].isupper() != match[2].isupper():
-                raise MayhapError(f'Range bounds ({match[1]} and {match[2]}) '
-                                  'must have the same case')
-            bound1 = ord(match[1])
-            bound2 = ord(match[2])
-
-    if is_range:
-        start = min(bound1, bound2)
-        stop = max(bound1, bound2) + 1
-        token_range = range(start, stop)
-        return [RangeToken(token_range, alpha, modifiers)]
-
-    match = RE_VARIABLE.match(content)
-    if match:
-        # Parse the variable as a pattern to allow for "eval"
-        variable = match[1].strip()
-        return [VariableToken(variable, modifiers)]
-
-    # Assume this is a symbol
-    # Parse the symbol as a pattern to allow for "eval"
-    symbol = content
-    return [SymbolToken(symbol, modifiers)]
-
-
 class Rule:
     def __init__(self, tokens, weight=DEFAULT_WEIGHT):
         self.tokens = tuple(tokens)
         self.weight = weight
 
     @staticmethod
-    def parse(rule, strip=False):
+    def parse(rule):
         '''
         Parses an production rule into a weight and a production string.
         '''
-        # Look for an explicit weight
-        match = RE_WEIGHT.search(rule)
-        if match:
-            try:
-                weight = float(match[1])
-            except ValueError as e:
-                raise MayhapError(f'Weight "{weight}" must be a positive '
-                                  'decimal number') from e
-            if weight < 0:
-                raise MayhapError(f'Weight "{weight}" must be a positive '
-                                  'decimal number')
-            string_end = match.start()
-
-        # Default to 1 weight otherwise
-        else:
-            weight = DEFAULT_WEIGHT
-            string_end = len(rule)
-
-        pattern = rule[:string_end]
-        if strip:
-            pattern = pattern.strip()
-        tokens = tokenize_pattern(pattern)
-        return Rule(tokens, weight)
+        try:
+            return E_RULE.parse_string(rule)[0]
+        except ParseException as e:
+            raise MayhapError('Error parsing rule: {e}') from e
 
     @staticmethod
     def choose(rules):
@@ -678,7 +556,7 @@ def parse_grammar(lines):
                                              'symbol', i + 1, line)
 
                 try:
-                    rule = Rule.parse(stripped, strip=True)
+                    rule = Rule.parse(stripped)
                 except MayhapError as e:
                     raise MayhapGrammarError(str(e), i + 1, line) from e
                 grammar[current_symbol].add(rule)
@@ -964,8 +842,8 @@ class Generator:
             return string
 
         # Otherwise, interpret the input as a pattern
-        tokens = tokenize_pattern(pattern)
-        string = self.evaluate_tokens(tokens)
+        rule = Rule.parse(pattern)
+        string = self.evaluate_tokens(rule.tokens)
         return string
 
     def handle_input(self, pattern):
