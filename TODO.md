@@ -98,7 +98,6 @@
 
 - Syntax documentation/tutorial
 - Test suite
-	- Test modifiers
 	- Test inflections
 	- Test importing
 	- Regression tests (compile all samples and compare new compiles against saved versions)

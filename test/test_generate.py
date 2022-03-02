@@ -9,7 +9,14 @@ from mayhap import (AssignmentToken,
                     RangeToken,
                     Rule,
                     SymbolToken,
-                    VariableToken)
+                    VariableToken,
+                    MOD_ARTICLE,
+                    MOD_PLURAL,
+                    MOD_ORDINAL,
+                    MOD_CAPITALIZE,
+                    MOD_LOWER,
+                    MOD_UPPER,
+                    MOD_TITLE)
 
 
 class TestGenerate(TestCase):
@@ -142,6 +149,85 @@ class TestGenerate(TestCase):
         actual = generator.evaluate_token(ChoiceToken([Rule(['choice1']),
                                                        Rule(['choice2'])]))
         self.assertTrue(actual in ('choice1', 'choice2'))
+
+    def test_mod_article(self):
+        '''
+        Evaluating a literal with the indefinite article modifier:
+        ['article'.a]
+        '''
+        generator = Generator({})
+        expected = 'an article'
+        actual = generator.evaluate_token(LiteralToken(
+            'article',
+            modifiers=[MOD_ARTICLE]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_plural(self):
+        '''
+        Evaluating a literal with the plural modifier: ['plural'.s]
+        '''
+        generator = Generator({})
+        expected = 'plurals'
+        actual = generator.evaluate_token(LiteralToken(
+            'plural',
+            modifiers=[MOD_PLURAL]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_ordinal(self):
+        '''
+        Evaluating a literal with the ordinal modifier: ['1'.th]
+        '''
+        generator = Generator({})
+        expected = '1st'
+        actual = generator.evaluate_token(LiteralToken(
+            '1',
+            modifiers=[MOD_ORDINAL]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_capitalize(self):
+        '''
+        Evaluating a literal with the capitalize modifier:
+        ['capitalize'.capitalize]
+        '''
+        generator = Generator({})
+        expected = 'Capitalize'
+        actual = generator.evaluate_token(LiteralToken(
+            'capitalize',
+            modifiers=[MOD_CAPITALIZE]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_lower(self):
+        '''
+        Evaluating a literal with the lower modifier: ['LOWER'.lower]
+        '''
+        generator = Generator({})
+        expected = 'lower'
+        actual = generator.evaluate_token(LiteralToken(
+            'LOWER',
+            modifiers=[MOD_LOWER]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_upper(self):
+        '''
+        Evaluating a literal with the upper modifier: ['upper'.upper]
+        '''
+        generator = Generator({})
+        expected = 'UPPER'
+        actual = generator.evaluate_token(LiteralToken(
+            'upper',
+            modifiers=[MOD_UPPER]))
+        self.assertEqual(expected, actual)
+
+    def test_mod_title(self):
+        '''
+        Evaluating a literal with the title modifier: ['title case'.title]
+        '''
+        generator = Generator({})
+        expected = 'Title Case'
+        actual = generator.evaluate_token(LiteralToken(
+            'title case',
+            modifiers=[MOD_TITLE]))
+        self.assertEqual(expected, actual)
 
     def test_weight(self):
         '''
