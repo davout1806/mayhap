@@ -222,7 +222,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([AssignmentToken('x',
                                          [AssignmentToken('y',
-                                                          SymbolToken('z'),
+                                                          [SymbolToken('z')],
                                                           echo=True)],
                                          echo=True)])
         actual = Rule.parse("[x=y=z]")

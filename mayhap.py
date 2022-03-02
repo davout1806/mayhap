@@ -157,7 +157,7 @@ class Token:
 class LiteralToken(Token):
     def __init__(self, string, modifiers=None):
         self.string = string
-        self.modifiers = modifiers if modifiers else []
+        self.modifiers = modifiers if modifiers else tuple()
 
     def __str__(self):
         string_term = f"'{self.string}'"
@@ -179,8 +179,8 @@ class LiteralToken(Token):
 
 class PatternToken(Token):
     def __init__(self, tokens, modifiers=None):
-        self.tokens = tokens
-        self.modifiers = modifiers if modifiers else []
+        self.tokens = tuple(tokens)
+        self.modifiers = modifiers if modifiers else tuple()
 
     def __str__(self):
         token_term = f'"{join_as_strings(self.tokens)}"'
@@ -204,7 +204,7 @@ class RangeToken(Token):
     def __init__(self, range_value, alpha, modifiers=None):
         self.range = range_value
         self.alpha = alpha
-        self.modifiers = modifiers if modifiers else []
+        self.modifiers = modifiers if modifiers else tuple()
 
     @property
     def start(self):
@@ -240,7 +240,7 @@ class RangeToken(Token):
 class SymbolToken(Token):
     def __init__(self, symbol, modifiers=None):
         self.symbol = symbol
-        self.modifiers = modifiers if modifiers else []
+        self.modifiers = modifiers if modifiers else tuple()
 
     def __str__(self):
         symbol_term = join_as_strings(self.symbol)
@@ -263,7 +263,7 @@ class SymbolToken(Token):
 class VariableToken(Token):
     def __init__(self, variable, modifiers=None):
         self.variable = variable
-        self.modifiers = modifiers if modifiers else []
+        self.modifiers = modifiers if modifiers else tuple()
 
     def __str__(self):
         return f'[${join_as_strings(self.variable)}]'
@@ -284,7 +284,7 @@ class VariableToken(Token):
 class AssignmentToken(Token):
     def __init__(self, variable, value, echo):
         self.variable = variable
-        self.value = value
+        self.value = tuple(value)
         self.echo = echo
 
     def __str__(self):
@@ -309,7 +309,7 @@ class AssignmentToken(Token):
 
 class ChoiceToken(Token):
     def __init__(self, rules):
-        self.rules = rules
+        self.rules = tuple(rules)
 
     def __str__(self):
         return f'[{join_as_strings(self.rules, delimiter="|")}]'
@@ -390,7 +390,7 @@ def tokenize_block(block):
     choices = block.split('|')
     if len(choices) > 1:
         rules = [Rule.parse(rule) for rule in choices]
-        return [ChoiceToken(tuple(rules))]
+        return [ChoiceToken(rules)]
 
     if (len(block) >= 2 and
             block[0] == PATTERN_START and
@@ -398,7 +398,7 @@ def tokenize_block(block):
         if len(block) == 2:
             return []
         tokens = tokenize_pattern(block[1:-1])
-        return [PatternToken(tuple(tokens))]
+        return [PatternToken(tokens)]
 
     assignment = False
     match = RE_ASSIGNMENT_SILENT.match(block)
@@ -416,7 +416,7 @@ def tokenize_block(block):
         variable = match[1].strip()
         value_block = match[2].strip()
         value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable, tuple(value_tokens), echo)]
+        return [AssignmentToken(variable, value_tokens, echo)]
 
     block = block.strip()
     content, modifiers = parse_modifiers(block)
@@ -459,7 +459,7 @@ def tokenize_block(block):
 
 class Rule:
     def __init__(self, tokens, weight=DEFAULT_WEIGHT):
-        self.tokens = tokens
+        self.tokens = tuple(tokens)
         self.weight = weight
 
     @staticmethod
@@ -489,7 +489,7 @@ class Rule:
         if strip:
             pattern = pattern.strip()
         tokens = tokenize_pattern(pattern)
-        return Rule(tuple(tokens), weight)
+        return Rule(tokens, weight)
 
     @staticmethod
     def choose(rules):

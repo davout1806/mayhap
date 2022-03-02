@@ -14,9 +14,9 @@
 		- `inflect.present_participle`
 	- Pronouns:
 		- `[$gender = ['masculine'|'feminine'|'gender-neutral']]`
-		- `['they'.gender($gender)]`
-		- `[gender.they]`
-		- `inflect.gender` and `inflect.singular_noun`
+		- Option 1: `['they'.gender($gender)]`
+		- Option 2: `[gender.they]`
+		- Use `inflect.gender` and `inflect.singular_noun`
 	- Tense: `[verb.ed]`, etc.
 		- https://github.com/clips/pattern (currently lacking Python 3.7 support)
 - Case:
@@ -64,7 +64,6 @@
 - Argument to print "compiled" grammar
 - Syntax documentation/tutorial
 - Test suite
-	- Unit tests
 	- Regression tests (compile all samples and compare new compiles against saved versions)
 	- Benchmarking (generate large grammar and query files)
 - Create a vim syntax file for Mayhap grammars
