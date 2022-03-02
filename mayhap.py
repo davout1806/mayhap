@@ -173,6 +173,9 @@ class LiteralToken(Token):
                 self.string == other.string and
                 self.modifiers == other.modifiers)
 
+    def __hash__(self):
+        return hash(self.string)
+
 
 class PatternToken(Token):
     def __init__(self, tokens, modifiers=None):
@@ -192,6 +195,9 @@ class PatternToken(Token):
         return (isinstance(other, PatternToken) and
                 self.tokens == other.tokens and
                 self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.tokens)
 
 
 class RangeToken(Token):
@@ -227,6 +233,9 @@ class RangeToken(Token):
                 self.alpha == other.alpha and
                 self.modifiers == other.modifiers)
 
+    def __hash__(self):
+        return hash(self.range)
+
 
 class SymbolToken(Token):
     def __init__(self, symbol, modifiers=None):
@@ -247,6 +256,9 @@ class SymbolToken(Token):
                 self.symbol == other.symbol and
                 self.modifiers == other.modifiers)
 
+    def __hash__(self):
+        return hash(self.symbol)
+
 
 class VariableToken(Token):
     def __init__(self, variable, modifiers=None):
@@ -264,6 +276,9 @@ class VariableToken(Token):
         return (isinstance(other, VariableToken) and
                 self.variable == other.variable and
                 self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.variable)
 
 
 class AssignmentToken(Token):
@@ -288,6 +303,9 @@ class AssignmentToken(Token):
                 self.value == other.value and
                 self.echo == other.echo)
 
+    def __hash__(self):
+        return hash((self.variable, self.value))
+
 
 class ChoiceToken(Token):
     def __init__(self, rules):
@@ -302,6 +320,9 @@ class ChoiceToken(Token):
     def __eq__(self, other):
         return (isinstance(other, ChoiceToken) and
                 self.rules == other.rules)
+
+    def __hash__(self):
+        return hash(self.choices)
 
 
 def parse_modifiers(block):
@@ -369,14 +390,15 @@ def tokenize_block(block):
     choices = block.split('|')
     if len(choices) > 1:
         rules = [Rule.parse(rule) for rule in choices]
-        return [ChoiceToken(rules)]
+        return [ChoiceToken(tuple(rules))]
 
     if (len(block) >= 2 and
             block[0] == PATTERN_START and
             block[-1] == PATTERN_START):
         if len(block) == 2:
             return []
-        return [PatternToken(tokenize_pattern(block[1:-1]))]
+        tokens = tokenize_pattern(block[1:-1])
+        return [PatternToken(tuple(tokens))]
 
     assignment = False
     match = RE_ASSIGNMENT_SILENT.match(block)
@@ -394,7 +416,7 @@ def tokenize_block(block):
         variable = match[1].strip()
         value_block = match[2].strip()
         value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable, value_tokens, echo)]
+        return [AssignmentToken(variable, tuple(value_tokens), echo)]
 
     block = block.strip()
     content, modifiers = parse_modifiers(block)
@@ -467,7 +489,7 @@ class Rule:
         if strip:
             pattern = pattern.strip()
         tokens = tokenize_pattern(pattern)
-        return Rule(tokens, weight)
+        return Rule(tuple(tokens), weight)
 
     @staticmethod
     def choose(rules):
@@ -489,6 +511,9 @@ class Rule:
         return (isinstance(other, Rule) and
                 self.tokens == other.tokens and
                 self.weight == other.weight)
+
+    def __hash__(self):
+        return hash(self.tokens)
 
 
 def import_grammar(import_file_name):
