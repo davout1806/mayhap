@@ -7,6 +7,7 @@ A grammar-based random text generator, inspired by [Perchance](https://perchance
 Dependencies:
 
 - Python 3
+- [pyparsing](https://github.com/pyparsing/pyparsing)
 - [inflect](https://github.com/jaraco/inflect) (optional; required for quality articles, plurals, and ordinals)
 
 To install Mayhap, clone the repository and install the required dependencies by running:
