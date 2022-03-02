@@ -55,40 +55,56 @@ class Token:
 
 
 class LiteralToken(Token):
-    def __init__(self, string, modifiers):
+    def __init__(self, string, modifiers=None):
         self.string = string
-        self.modifiers = modifiers
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         string_term = f"'{self.string}'"
-        terms = [string_term] + self.modifiers
+        terms = (string_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
         return (f'LiteralToken(string={repr(self.string)}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (isinstance(other, LiteralToken) and
+                self.string == other.string and
+                self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.string)
+
 
 class PatternToken(Token):
-    def __init__(self, tokens, modifiers):
-        self.tokens = tokens
-        self.modifiers = modifiers
+    def __init__(self, tokens, modifiers=None):
+        self.tokens = tuple(tokens)
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         token_term = f'"{join_as_strings(self.tokens)}"'
-        terms = [token_term] + self.modifiers
+        terms = (token_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
         return (f'PatternToken(tokens={self.tokens}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (isinstance(other, PatternToken) and
+                self.tokens == other.tokens and
+                self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.tokens)
+
 
 class RangeToken(Token):
-    def __init__(self, range_value, alpha, modifiers):
+    def __init__(self, range_value, alpha, modifiers=None):
         self.range = range_value
         self.alpha = alpha
-        self.modifiers = modifiers
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     @property
     def start(self):
@@ -104,48 +120,71 @@ class RangeToken(Token):
 
     def __str__(self):
         range_term = f'{self.start}-{self.stop}'
-        terms = [range_term] + self.modifiers
+        terms = (range_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
         return (f'RangeToken(range={self.range}, '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (isinstance(other, RangeToken) and
+                self.range == other.range and
+                self.alpha == other.alpha and
+                self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.range)
+
 
 class SymbolToken(Token):
-    def __init__(self, symbol, modifiers):
+    def __init__(self, symbol, modifiers=None):
         self.symbol = symbol
-        self.modifiers = modifiers
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
         symbol_term = join_as_strings(self.symbol)
-        terms = [symbol_term] + self.modifiers
+        terms = (symbol_term,) + self.modifiers
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
         return (f'SymbolToken(symbol="{self.symbol}", '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (isinstance(other, SymbolToken) and
+                self.symbol == other.symbol and
+                self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.symbol)
+
 
 class VariableToken(Token):
-    def __init__(self, variable, modifiers):
+    def __init__(self, variable, modifiers=None):
         self.variable = variable
-        self.modifiers = modifiers
+        self.modifiers = tuple(modifiers) if modifiers else tuple()
 
     def __str__(self):
-        variable_term = self.variable
-        terms = [variable_term] + self.modifiers
-        return f"[${'.'.join(terms)}]"
+        return f'[${join_as_strings(self.variable)}]'
 
     def __repr__(self):
         return (f'VariableToken(variable="{self.variable}", '
                 f'modifiers={self.modifiers})')
 
+    def __eq__(self, other):
+        return (isinstance(other, VariableToken) and
+                self.variable == other.variable and
+                self.modifiers == other.modifiers)
+
+    def __hash__(self):
+        return hash(self.variable)
+
 
 class AssignmentToken(Token):
     def __init__(self, variable, value, echo):
         self.variable = variable
-        self.value = value
+        self.value = tuple(value)
         self.echo = echo
 
     def __str__(self):
@@ -154,20 +193,36 @@ class AssignmentToken(Token):
                 f'{join_as_strings(self.value)}]')
 
     def __repr__(self):
-        return (f'AssignmentToken(variable="{self.variable}", '
+        return (f'AssignmentToken(variable={self.variable}, '
                 f'value={self.value}, '
                 f'echo={self.echo})')
+
+    def __eq__(self, other):
+        return (isinstance(other, AssignmentToken) and
+                self.variable == other.variable and
+                self.value == other.value and
+                self.echo == other.echo)
+
+    def __hash__(self):
+        return hash((self.variable, self.value))
 
 
 class ChoiceToken(Token):
     def __init__(self, rules):
-        self.rules = rules
+        self.rules = tuple(rules)
 
     def __str__(self):
         return f'[{join_as_strings(self.rules, delimiter="|")}]'
 
     def __repr__(self):
         return f'ChoiceToken(rules={self.rules})'
+
+    def __eq__(self, other):
+        return (isinstance(other, ChoiceToken) and
+                self.rules == other.rules)
+
+    def __hash__(self):
+        return hash(self.rules)
 
 
 def word_excluding(exclude_chars):
@@ -176,11 +231,11 @@ def word_excluding(exclude_chars):
 
 
 def parse_literal(toks):
-    return LiteralToken(toks[0], modifiers=[])
+    return LiteralToken(toks[0])
 
 
 def parse_pattern(toks):
-    return PatternToken(list(toks), modifiers=[])
+    return PatternToken(tuple(toks))
 
 
 def parse_range_num(toks):
@@ -188,7 +243,7 @@ def parse_range_num(toks):
     bound2 = int(toks[1])
     start = min(bound1, bound2)
     stop = max(bound1, bound2) + 1
-    return RangeToken(range(start, stop), alpha=False, modifiers=[])
+    return RangeToken(range(start, stop), alpha=False)
 
 
 def parse_range_alpha(toks):
@@ -196,32 +251,32 @@ def parse_range_alpha(toks):
     bound2 = ord(toks[1])
     start = min(bound1, bound2)
     stop = max(bound1, bound2) + 1
-    return RangeToken(range(start, stop), alpha=True, modifiers=[])
+    return RangeToken(range(start, stop), alpha=True)
 
 
 def parse_symbol(toks):
-    return SymbolToken(toks[0], [])
+    return SymbolToken(toks[0])
 
 
 def parse_variable(toks):
-    return VariableToken(toks[0], [])
+    return VariableToken(toks[0])
 
 
 def parse_assignment_echo(toks):
-    return AssignmentToken(toks[0], list(toks[1:]), echo=True)
+    return AssignmentToken(toks[0], tuple(toks[1:]), echo=True)
 
 
 def parse_assignment_silent(toks):
-    return AssignmentToken(toks[0], list(toks[1:]), echo=False)
+    return AssignmentToken(toks[0], tuple(toks[1:]), echo=False)
 
 
 # TODO parse choices as rules
 def parse_choices(toks):
-    return ChoiceToken(list(toks))
+    return ChoiceToken(tuple(toks))
 
 
 def parse_modifiers(toks):
-    toks[0].modifiers = list(toks[1:])
+    toks[0].modifiers = tuple(toks[1:])
     return toks[0]
 
 
@@ -399,18 +454,6 @@ class MayhapGrammarError(MayhapError):
         print(self.line, file=stderr)
 
 
-def parse_modifiers(block):
-    modifiers = []
-    for match in RE_MODIFIER.finditer(block):
-        # Slice block to get its content if this is the first match
-        if not modifiers:
-            content = block[:match.start()]
-        modifiers.append(match[1])
-    if not modifiers:
-        content = block
-    return content, modifiers
-
-
 def tokenize_pattern(pattern):
     tokens = []
     stack = []
@@ -459,7 +502,7 @@ def tokenize_block(block):
             block[-1] == LITERAL_END):
         if len(block) == 2:
             return []
-        return [block[1:-1]]
+        return [LiteralToken(block[1:-1])]
 
     choices = block.split('|')
     if len(choices) > 1:
@@ -471,7 +514,8 @@ def tokenize_block(block):
             block[-1] == PATTERN_START):
         if len(block) == 2:
             return []
-        return tokenize_pattern(block[1:-1])
+        tokens = tokenize_pattern(block[1:-1])
+        return [PatternToken(tokens)]
 
     assignment = False
     match = RE_ASSIGNMENT_SILENT.match(block)
@@ -485,11 +529,11 @@ def tokenize_block(block):
             echo = True
 
     if assignment:
-        variable_pattern = match[1].strip()
-        variable_tokens = tokenize_pattern(variable_pattern)
+        # Parse the variable as a pattern to allow for "eval"
+        variable = match[1].strip()
         value_block = match[2].strip()
         value_tokens = tokenize_block(value_block)
-        return [AssignmentToken(variable_tokens, value_tokens, echo)]
+        return [AssignmentToken(variable, value_tokens, echo)]
 
     block = block.strip()
     content, modifiers = parse_modifiers(block)
@@ -520,19 +564,19 @@ def tokenize_block(block):
 
     match = RE_VARIABLE.match(content)
     if match:
-        variable_pattern = match[1].strip()
-        variable_tokens = tokenize_pattern(variable_pattern)
-        return [VariableToken(variable_tokens, modifiers)]
+        # Parse the variable as a pattern to allow for "eval"
+        variable = match[1].strip()
+        return [VariableToken(variable, modifiers)]
 
     # Assume this is a symbol
-    symbol_pattern = content
-    symbol_tokens = tokenize_pattern(symbol_pattern)
-    return [SymbolToken(symbol_tokens, modifiers)]
+    # Parse the symbol as a pattern to allow for "eval"
+    symbol = content
+    return [SymbolToken(symbol, modifiers)]
 
 
 class Rule:
-    def __init__(self, tokens, weight):
-        self.tokens = tokens
+    def __init__(self, tokens, weight=DEFAULT_WEIGHT):
+        self.tokens = tuple(tokens)
         self.weight = weight
 
     @staticmethod
@@ -579,6 +623,14 @@ class Rule:
 
     def __repr__(self):
         return f'Rule(tokens={self.tokens}, weight={self.weight})'
+
+    def __eq__(self, other):
+        return (isinstance(other, Rule) and
+                self.tokens == other.tokens and
+                self.weight == other.weight)
+
+    def __hash__(self):
+        return hash(self.tokens)
 
 
 def import_grammar(import_file_name):
@@ -781,8 +833,6 @@ class Generator:
         if unique:
             # If all symbols have been used, old symbols must be reused
             # Recreate and draw from the unused list again to reduce duplicates
-            # TODO consider throwing an error (or logging a warning) if symbols
-            # must be reused
             rules = self.unused.get(symbol)
             if rules is None:
                 raise MayhapError(f'Symbol "{symbol}" not found')
@@ -824,7 +874,7 @@ class Generator:
             return self.evaluate_tokens(rule.tokens, depth=depth + 1)
 
         if isinstance(token, AssignmentToken):
-            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            variable = token.variable
             value = self.evaluate_tokens(token.value, depth=depth + 1)
             self.log(tokens=[AssignmentToken(variable, value, token.echo)],
                      depth=depth)
@@ -833,6 +883,8 @@ class Generator:
 
         if isinstance(token, LiteralToken):
             string = token.string
+        elif isinstance(token, PatternToken):
+            string = self.evaluate_tokens(token.tokens, depth=depth + 1)
         elif isinstance(token, RangeToken):
             choice = random.choice(token.range)
             if token.alpha:
@@ -844,7 +896,7 @@ class Generator:
             rule = self.produce(symbol)
             string = self.evaluate_tokens(rule.tokens, depth=depth + 1)
         elif isinstance(token, VariableToken):
-            variable = self.evaluate_tokens(token.variable, depth=depth + 1)
+            variable = token.variable
             value = self.variables.get(variable)
             if value is None:
                 raise MayhapError(f'Variable "{variable}" not found')
@@ -1102,6 +1154,11 @@ def main():
             action='store_true',
             help='use non-interactive batch processing mode (default if '
                  'reading from a pipe)')
+    interactive_group.add_argument(
+            '-t', '--test',
+            action='store_true',
+            help='test the grammar by evaluating every rule and printing any '
+                 'errors')
     parser.add_argument(
             '-v', '--verbose',
             action='store_true',
@@ -1123,6 +1180,24 @@ def main():
         print(grammar_to_string(grammar), file=stderr)
 
     generator = Generator(grammar, args.verbose)
+
+    if args.test:
+        failures = 0
+        for symbol, rules in grammar.items():
+            for rule in rules:
+                try:
+                    generator.evaluate_tokens(rule.tokens)
+                except MayhapError as e:
+                    print(symbol)
+                    print('\t' + join_as_strings(rule.tokens))
+                    print_error(e, generator.verbose)
+                    print()
+                    failures += 1
+        if failures > 0:
+            print(f'FAILED (failures={failures})')
+        else:
+            print('OK')
+        return failures
 
     # If a pattern was given, generate it and exit
     if args.pattern:
