@@ -322,7 +322,7 @@ class ChoiceToken(Token):
                 self.rules == other.rules)
 
     def __hash__(self):
-        return hash(self.choices)
+        return hash(self.rules)
 
 
 def parse_modifiers(block):
