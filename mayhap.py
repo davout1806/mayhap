@@ -716,8 +716,6 @@ class Generator:
         if unique:
             # If all symbols have been used, old symbols must be reused
             # Recreate and draw from the unused list again to reduce duplicates
-            # TODO consider throwing an error (or logging a warning) if symbols
-            # must be reused
             rules = self.unused.get(symbol)
             if rules is None:
                 raise MayhapError(f'Symbol "{symbol}" not found')

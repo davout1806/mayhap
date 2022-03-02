@@ -1,6 +1,12 @@
 # TODO
 
+## Refactoring
+
 - Rewrite using `pyparsing` instead of regex and custom methods
+- Reorganize project to follow Python package structure
+
+## Grammar Features
+
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
 	- Dice parsing: `[2d6+3]`
@@ -8,6 +14,7 @@
 		- `dice` module
 - Fractional weights `^2/5.5`
 - Repeated accesses: `[5 * 0-9]`
+- Parameterized modifiers: `[x=1-5] [item.s($x)]`
 - Inflections:
 	- Conditional pluralization: `[x=1-5] [item.s($x)]`
 	- Present participle: `[verb.ing]`
@@ -46,24 +53,54 @@
 - Add syntax to reference symbols?
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
-	- Workaround: `[x ~ 'symbol'][[$x]]`
+	- Former workaround: `[x ~ 'symbol'][[$x]]`
 - C-style format string support: `['%02d' % [0-60]]`
 - Consider removing `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
 - Namespaces for imported grammars: `[animals:bird]`
 	- Custom namespace: `@namespace mynamespace`?
 	- Import with a custom namespace ("import as")
+
+## Program Features
+
 - Point to the character where an error happened (strip indentation)
-- Flag to control whether unused variables are preserved between queries (`persistent`, false by default)
-- Flag to make symbols default to mundane
+- Warn when running out of unique symbols
+- Flags
+	- Control whether unused variables are preserved between queries (`persistent`, false by default)
+	- Make symbols default to mundane
+	- Force uniqueness (fail when running out of unique symbols)
+	- Maximum recursion depth for recursive symbols
+- Validation
+	- Validate modifiers while parsing
+	- Validate symbols after parsing
+	- Validate variables after parsing
+	- Warn about unused symbols
+	- Warn about unused variables
+- Basic optimizations
+	- Replace unmodified literal tokens into strings and merge with neighbors
+	- Unpack unmodified pattern tokens
+	- Resolve deterministic literal modifiers while parsing
+	- Resolve deterministic inflections after parsing
+- Arguments
+	- Enable/disable warnings
+	- Enable/disable validation
+	- Enable/disable optimizations
+	- Just validate grammar and exit
+	- Generate all rules (for testing)
+	- Print standardized grammar (output of `print_grammar`)
 - Shell commands
 	- Save grammar to file: `/export path_to_grammar.mh`
 	- Toggle generator flags: `/set verbose`/`/unset verbose` or `/set verbose true`
 - Improve autocomplete and fix autocomplete for help
 - Run file as shell script (use `Cmd` but disable prompt)
-- Argument to print "compiled" grammar
+
+## Non-Functional
+
 - Syntax documentation/tutorial
 - Test suite
+	- Test modifiers
+	- Test inflections
+	- Test importing
 	- Regression tests (compile all samples and compare new compiles against saved versions)
-	- Benchmarking (generate large grammar and query files)
+	- Performance tests (generate large grammar and query files)
 - Create a vim syntax file for Mayhap grammars
