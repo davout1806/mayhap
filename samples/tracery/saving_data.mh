@@ -30,7 +30,7 @@ mood
 	courteous
 
 story
-	[$hero] traveled with her pet [$heroPet].  [$hero] was never [mood], for the [$heroPet] was always too [mood].
+	[hero = name] traveled with her pet [heroPet = animal].  [$hero] was never [mood], for the [$heroPet] was always too [mood].
 
 origin
-	[hero = name][heroPet = animal][story]
+	[story]
