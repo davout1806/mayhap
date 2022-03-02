@@ -1037,6 +1037,11 @@ def main():
             action='store_true',
             help='use non-interactive batch processing mode (default if '
                  'reading from a pipe)')
+    interactive_group.add_argument(
+            '-t', '--test',
+            action='store_true',
+            help='test the grammar by evaluating every rule and printing any '
+                 'errors')
     parser.add_argument(
             '-v', '--verbose',
             action='store_true',
@@ -1058,6 +1063,24 @@ def main():
         print(grammar_to_string(grammar), file=stderr)
 
     generator = Generator(grammar, args.verbose)
+
+    if args.test:
+        failures = 0
+        for symbol, rules in grammar.items():
+            for rule in rules:
+                try:
+                    generator.evaluate_tokens(rule.tokens)
+                except MayhapError as e:
+                    print(symbol)
+                    print('\t' + join_as_strings(rule.tokens))
+                    print_error(e, generator.verbose)
+                    print()
+                    failures += 1
+        if failures > 0:
+            print(f'FAILED (failures={failures})')
+        else:
+            print('OK')
+        return failures
 
     # If a pattern was given, generate it and exit
     if args.pattern:

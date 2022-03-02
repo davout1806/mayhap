@@ -17,14 +17,13 @@ find "$samples" -type f -name '*.mh' > "$sample_list"
 
 start_time=$(date +%s)
 while read -r sample; do
-	# TODO use the default production, run all productions, and/or add a
-	# "validate" flag
-	echo "$mayhap $sample origin"
-	if ! "$mayhap" "$sample" origin; then
+	echo "$mayhap --test $sample"
+	if ! "$mayhap" --test "$sample"; then
 		failures=$((failures + 1))
 	fi
 	total=$((total + 1))
 	echo
+	echo '----------------------------------------------------------------------'
 done < "$sample_list"
 end_time=$(date +%s)
 duration=$((end_time - start_time))

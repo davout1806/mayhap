@@ -86,7 +86,6 @@
 	- Enable/disable validation
 	- Enable/disable optimizations
 	- Just validate grammar and exit
-	- Generate all rules (for testing)
 	- Print standardized grammar (output of `print_grammar`)
 - Shell commands
 	- Save grammar to file: `/export path_to_grammar.mh`
