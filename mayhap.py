@@ -361,38 +361,9 @@ E_RULE.add_parse_action(parse_rule)
 # e.g. @/home/username/generator_name.mh
 RE_IMPORT = re.compile(r'@(.+)')
 
-# Matches a weight appended to a rule (a number preceded by a caret at the end
-# of the line)
-# e.g. ^4.25
-RE_WEIGHT = re.compile(r'\^((\d*\.)?\d+)\s*$')
-
 # Matches comments (lines starting with a hash)
 # e.g. \t# hello world
 RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
-
-# Matches ranges separated by a hyphen
-# e.g. 10-20
-RE_RANGE_NUMERIC = re.compile(r'([+-]?\d+)-([+-]?\d+)')
-# e.g. a-z
-RE_RANGE_ALPHA = re.compile(r'([a-zA-Z])-([a-zA-Z])')
-
-# Matches echoed variable assignments (variable name followed by equals and the
-# value)
-# e.g. _0varName= symbol
-RE_ASSIGNMENT_ECHOED = re.compile(r'([^\.]+)=([^\.]+)')
-
-# Matches silent variable assignments (variable name followed by tilda equals
-# and the value)
-# e.g. _0varName~ symbol
-RE_ASSIGNMENT_SILENT = re.compile(r'([^\.]+)~([^\.]+)')
-
-# Matches variable accesses (dollar sign followed by a variable name)
-# e.g. $_0varName
-RE_VARIABLE = re.compile(r'\$([^\.]+)')
-
-# Matches modifiers (period followed by a modifier type)
-# e.g. .mundane
-RE_MODIFIER = re.compile(r'\.([^\.]+)')
 
 # Matches dynamic indefinite articles
 # e.g. a(n)
