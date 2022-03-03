@@ -42,7 +42,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a backspace-escaped block: \\[not_a_block\\]
         '''
-        expected = Rule(['[not_a_block]'])
+        expected = Rule([LiteralToken('['), 'not_a_block', LiteralToken(']')])
         actual = Rule.parse('\\[not_a_block\\]')
         self.assertEqual(expected, actual)
 
@@ -50,8 +50,16 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a backslash-escaped weight: not a weight \\^2
         '''
-        expected = Rule(['not a weight ^2'])
+        expected = Rule(['not a weight ', LiteralToken('^'), '2'])
         actual = Rule.parse('not a weight \\^2')
+        self.assertEqual(expected, actual)
+
+    def test_escape_sequences(self):
+        '''
+        Parsing a rule with backslash-escaped escape sequences: \\t\\n
+        '''
+        expected = Rule([LiteralToken('\t'), LiteralToken('\n')])
+        actual = Rule.parse('\\t\\n')
         self.assertEqual(expected, actual)
 
     def test_weight(self):
@@ -79,17 +87,24 @@ class TestRule(TestCase):
 
     def test_unclosed_block(self):
         '''
-        Parsing a rule with an unclosed top-level block: string [
+        Parsing a rule with an unclosed block: string [
         '''
         with self.assertRaises(MayhapError):
             Rule.parse('string [')
 
     def test_closed_block(self):
         '''
-        Parsing a rule with a prematurely closed top-level block: string ]
+        Parsing a rule with a prematurely closed block: string ]
         '''
         with self.assertRaises(MayhapError):
             Rule.parse('string ]')
+
+    def test_empty_block(self):
+        '''
+        Parsing a rule with an empty block: []
+        '''
+        with self.assertRaises(MayhapError):
+            Rule.parse('[]')
 
     def test_literal(self):
         '''
@@ -107,7 +122,7 @@ class TestRule(TestCase):
         actual = Rule.parse("['literal'.s]")
         self.assertEqual(expected, actual)
 
-    def test_literal_escaped_quotes(self):
+    def test_literal_escaped_quote(self):
         '''
         Parsing a rule with a literal token with an escaped single quote:
         ['literal\\'s']
@@ -146,7 +161,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern token with an escaped double quote:
         ["pattern\\"s"]
         '''
-        expected = Rule([PatternToken(['pattern"s'])])
+        expected = Rule([PatternToken(['pattern', LiteralToken('"'), 's'])])
         actual = Rule.parse('["pattern\\"s"]')
         self.assertEqual(expected, actual)
 
@@ -372,4 +387,16 @@ class TestRule(TestCase):
                                                        Rule(['choice2'])])],
                                          echo=True)])
         actual = Rule.parse("[variable=choice1|choice2]")
+        self.assertEqual(expected, actual)
+
+    def test_assignment_choices_whitespace(self):
+        '''
+        Parsing a rule with a variable assignment to choices with whitespace:
+        [ variable = choice1 | choice2 ]
+        '''
+        expected = Rule([AssignmentToken('variable',
+                                         [ChoiceToken([Rule([' choice1 ']),
+                                                       Rule([' choice2 '])])],
+                                         echo=True)])
+        actual = Rule.parse("[ variable = choice1 | choice2 ]")
         self.assertEqual(expected, actual)

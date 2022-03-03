@@ -130,7 +130,7 @@ class TestGrammar(TestCase):
                 'symbol',
             ])
 
-    def test_bad_symbol_name(self):
+    def test_bad_symbol(self):
         '''
         Parsing a grammar with an illegal symbol name.
         '''
@@ -138,16 +138,4 @@ class TestGrammar(TestCase):
             parse_grammar([
                 'symbol with spaces',
                 '\trule',
-            ])
-
-    def test_inconsistent_indentation(self):
-        '''
-        Parsing a grammar with inconsistent rule indentation.
-        '''
-        with self.assertRaises(MayhapGrammarError):
-            parse_grammar([
-                'symbol',
-                '\trule1',
-                '    rule2',
-                '  rule3',
             ])

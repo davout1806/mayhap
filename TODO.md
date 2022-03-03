@@ -13,6 +13,7 @@
 		- Regex: `(\d+)d(\d+)([+-](\d+)d(\d+))*([+-]\d+)?`
 		- `dice` module
 - Fractional weights(?): `^2/5.5`
+	- See `pyparsing_common.fraction`
 - Repeated accesses: `[5 * 0-9]`
 - Inflections:
 	- Conditional pluralization: `[x=1-5] [item.s($x)]`
@@ -30,12 +31,6 @@
 	- Rule definition: `Hi, [$name]!`
 	- Invocation: `[greet('Bob')]`
 - Markov chains: `@markov symbolname`?
-- Escape characters:
-	- As a pre-processing pass, convert `\*` to `['*']` (where `*` is any escapable character)
-	- This should work, because anywhere a block could legally be escaped is necessarily a place where a block could occur
-	- Handle `\n` and `\t` as special cases
-	- Handle `\\` by converting it to `\` (not putting it in a literal token)
-	- Ideally, backslashes would be ignored in single quotes, but that would require more intelligent pre-processing
 - Add syntax to reference symbols
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
@@ -87,12 +82,6 @@
 
 - Syntax documentation/tutorial
 - Test suite
-	- Escapes
-		- Literal caret
-		- Caret in literal token
-		- Block in literal token
-		- Escaped quotes in pattern token
-		- Pattern token in pattern token
 	- Importing
 	- Regression tests (compile all samples and compare new compiles against saved versions)
 	- Performance tests (generate large grammar and query files)

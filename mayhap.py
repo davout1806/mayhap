@@ -36,14 +36,12 @@ from pyparsing import (Combine,
                        StringEnd,
                        StringStart,
                        Suppress,
+                       QuotedString,
                        Word,
                        ZeroOrMore,
-                       alphanums,
                        alphas,
-                       nums,
                        printables,
-                       remove_quotes,
-                       sgl_quoted_string)
+                       pyparsing_common)
 
 try:
     import inflect
@@ -229,6 +227,8 @@ class ChoiceToken(Token):
 
 class Weight:
     def __init__(self, weight):
+        if weight < 0:
+            raise MayhapError(f'Weight must be non-negative; was {weight}')
         self.weight = weight
 
 
@@ -246,14 +246,17 @@ def parse_pattern(toks):
 
 
 def parse_range_num(toks):
-    bound1 = int(toks[0])
-    bound2 = int(toks[1])
+    bound1 = toks[0]
+    bound2 = toks[1]
     start = min(bound1, bound2)
     stop = max(bound1, bound2) + 1
     return RangeToken(range(start, stop), alpha=False)
 
 
 def parse_range_alpha(toks):
+    if toks[0].isupper() != toks[1].isupper():
+        raise MayhapError(f'Range bounds ({toks[0]} and {toks[1]}) must have '
+                          'the same case')
     bound1 = ord(toks[0])
     bound2 = ord(toks[1])
     start = min(bound1, bound2)
@@ -288,18 +291,21 @@ def parse_modifiers(toks):
 
 
 def parse_weight(toks):
-    return Weight(float(toks[0]))
+    return Weight(toks[0])
 
 
 def parse_rule(toks):
     if len(toks) > 0 and isinstance(toks[-1], Weight):
-        return Rule(toks[:-1], toks[-1].weight)
+        if len(toks) > 1:
+            tokens = toks[:-2] + [toks[-2].rstrip()]
+        else:
+            tokens = []
+        return Rule(tokens, toks[-1].weight)
     return Rule(toks)
 
 
 # Parser expressions
-E_NUMBER = Combine(Optional(Word(nums)) + '.' + Word(nums)) | Word(nums)
-E_WEIGHT = Suppress('^') + E_NUMBER
+E_WEIGHT = Suppress('^') + pyparsing_common.fnumber.copy()
 E_WEIGHT.add_parse_action(parse_weight)
 
 E_SPECIAL = Forward()
@@ -309,13 +315,15 @@ E_BLOCK = Suppress('[') + E_SPECIAL + Suppress(']')
 E_UNQUOTED_TEXT = Combine(OneOrMore(word_excluding('"[]'))).leave_whitespace()
 E_UNQUOTED_TOKEN = Forward()
 
-E_LITERAL = sgl_quoted_string.set_parse_action(remove_quotes)
+E_LITERAL = QuotedString("'", esc_char='\\', multiline=True)
 E_LITERAL.add_parse_action(parse_literal)
 
 E_PATTERN = Suppress('"') + OneOrMore(E_UNQUOTED_TOKEN) + Suppress('"')
 E_PATTERN.add_parse_action(parse_pattern)
 
-E_RANGE_NUM = Word(nums) + Suppress('-') + Word(nums)
+E_RANGE_NUM = (pyparsing_common.signed_integer()
+               + Suppress('-')
+               + pyparsing_common.signed_integer())
 E_RANGE_NUM.add_parse_action(parse_range_num)
 
 E_RANGE_ALPHA = Word(alphas, exact=1) + Suppress('-') + Word(alphas, exact=1)
@@ -323,16 +331,16 @@ E_RANGE_ALPHA.add_parse_action(parse_range_alpha)
 
 E_RANGE = E_RANGE_NUM | E_RANGE_ALPHA
 
-E_SYMBOL = Word(alphanums + '_')
+E_SYMBOL = pyparsing_common.identifier.copy()
 E_SYMBOL.add_parse_action(parse_symbol)
 
-E_VARIABLE_NAME = Word(alphanums + '_')
-E_VARIABLE_ACCESS = Suppress('$') + E_VARIABLE_NAME
+E_VARIABLE = pyparsing_common.identifier.copy()
+E_VARIABLE_ACCESS = Suppress('$') + E_VARIABLE
 E_VARIABLE_ACCESS.add_parse_action(parse_variable)
 
-E_ASSIGNMENT_ECHO = E_VARIABLE_NAME + Literal('=').suppress() + E_SPECIAL
+E_ASSIGNMENT_ECHO = E_VARIABLE + Literal('=').suppress() + E_SPECIAL
 E_ASSIGNMENT_ECHO.add_parse_action(parse_assignment_echo)
-E_ASSIGNMENT_SILENT = E_VARIABLE_NAME + Literal('~').suppress() + E_SPECIAL
+E_ASSIGNMENT_SILENT = E_VARIABLE + Literal('~').suppress() + E_SPECIAL
 E_ASSIGNMENT_SILENT.add_parse_action(parse_assignment_silent)
 E_ASSIGNMENT = E_ASSIGNMENT_ECHO | E_ASSIGNMENT_SILENT
 
@@ -342,7 +350,7 @@ E_CHOICES = (Optional(E_RULE, default=None).leave_whitespace()
                          + Optional(E_RULE, default=None).leave_whitespace()))
 E_CHOICES.add_parse_action(parse_choices)
 
-E_MODIFIER = Suppress('.') + Word(alphanums + '_')
+E_MODIFIER = Suppress('.') + pyparsing_common.identifier.copy()
 E_MODDED = ((E_LITERAL | E_PATTERN | E_RANGE | E_SYMBOL | E_VARIABLE_ACCESS)
             + ZeroOrMore(E_MODIFIER))
 E_MODDED.add_parse_action(parse_modifiers)
@@ -369,6 +377,10 @@ RE_IMPORT = re.compile(r'@(.+)')
 # e.g. \t# hello world
 RE_COMMENT = re.compile(r'(^|[^\\])(#.*)')
 
+# Matches a backslash-escaped character
+# e.g. \[, \n, \\
+RE_ESCAPE = re.compile(r'\\(.)')
+
 # Matches dynamic indefinite articles
 # e.g. a(n)
 RE_ARTICLE = re.compile(r'(a)\((n)\)', re.IGNORECASE)
@@ -376,15 +388,6 @@ RE_ARTICLE = re.compile(r'(a)\((n)\)', re.IGNORECASE)
 # Matches dynamic pluralization
 # e.g. (s)
 RE_PLURAL = re.compile(r'\((s)\)', re.IGNORECASE)
-
-# The start and end of a block
-# Must parse manually, as regular expressions cannot easily parse nested groups
-BLOCK_START = '['
-BLOCK_END = ']'
-PATTERN_START = '"'
-PATTERN_END = '"'
-LITERAL_START = "'"
-LITERAL_END = "'"
 
 # Do not require a unique production to be chosen from the given symbol
 MOD_MUNDANE = 'mundane'
@@ -409,6 +412,9 @@ MOD_UPPER = 'upper'
 
 # Convert to title case (capitalize the first letter of each word)
 MOD_TITLE = 'title'
+
+# All characters special to Mayhap that can be escaped with a backslash
+SPECIAL_CHARS = set('"^[]|')
 
 # The default weight for rules with no explicit weight
 DEFAULT_WEIGHT = 1.0
@@ -456,8 +462,19 @@ class Rule:
         '''
         Parses an production rule into a weight and a production string.
         '''
+        def escape_repl(match):
+            if match[1] == "'":
+                return "\\'"
+            if match[1] in SPECIAL_CHARS:
+                unescaped = match[1]
+            else:
+                unescaped = (match[0].encode('raw_unicode_escape')
+                                     .decode('unicode_escape'))
+            return f"['{unescaped}']"
+
+        rule = RE_ESCAPE.sub(escape_repl, rule)
         try:
-            return E_RULE_LINE.parse_string(rule)[0]
+            return E_RULE_LINE.parse_with_tabs().parse_string(rule)[0]
         except ParseException as e:
             raise MayhapError(f'Error parsing rule: {e}') from e
 
@@ -544,7 +561,18 @@ def parse_grammar(lines):
                                              i + 1, line)
 
                 current_symbol = stripped
+
+                if len(E_SYMBOL.search_string(current_symbol)) != 1:
+                    raise MayhapGrammarError('Invalid symbol name: '
+                                             f'{current_symbol}',
+                                             i + 1, line)
+
                 grammar[current_symbol] = set()
+
+    if current_symbol and not grammar[current_symbol]:
+        raise MayhapGrammarError(f'Symbol "{current_symbol}" closed with no '
+                                 'production rules', len(lines), lines[-1])
+
     return grammar
 
 
