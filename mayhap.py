@@ -33,6 +33,8 @@ from pyparsing import (Combine,
                        OneOrMore,
                        Optional,
                        ParseException,
+                       StringEnd,
+                       StringStart,
                        Suppress,
                        Word,
                        ZeroOrMore,
@@ -290,7 +292,7 @@ def parse_weight(toks):
 
 
 def parse_rule(toks):
-    if isinstance(toks[-1], Weight):
+    if len(toks) > 0 and isinstance(toks[-1], Weight):
         return Rule(toks[:-1], toks[-1].weight)
     return Rule(toks)
 
@@ -354,6 +356,8 @@ E_TOKEN = (E_TEXT | E_BLOCK).leave_whitespace()
 
 E_RULE <<= ZeroOrMore(E_TOKEN) + Optional(E_WEIGHT)
 E_RULE.add_parse_action(parse_rule)
+
+E_RULE_LINE = StringStart() + E_RULE + StringEnd()
 
 
 # Matches the name of a generator to import when parsing a grammar
@@ -453,9 +457,9 @@ class Rule:
         Parses an production rule into a weight and a production string.
         '''
         try:
-            return E_RULE.parse_string(rule)[0]
+            return E_RULE_LINE.parse_string(rule)[0]
         except ParseException as e:
-            raise MayhapError('Error parsing rule: {e}') from e
+            raise MayhapError(f'Error parsing rule: {e}') from e
 
     @staticmethod
     def choose(rules):
