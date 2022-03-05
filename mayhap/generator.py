@@ -51,7 +51,7 @@ class MayhapGenerator:
             # Recreate and draw from the unused list again to reduce duplicates
             rules = self.unused.get(symbol)
             if rules is None:
-                raise MayhapError(f'Symbol "{symbol}" not found')
+                raise MayhapError(f'Symbol not found: {symbol}')
 
             if len(rules) == 0:
                 self.unused[symbol] = self.grammar[symbol].copy()
@@ -62,7 +62,7 @@ class MayhapGenerator:
 
         rules = self.grammar[symbol]
         if rules is None:
-            raise MayhapError(f'Symbol "{symbol}" not found')
+            raise MayhapError(f'Symbol not found: {symbol}')
         rule = choose_rule(rules)
         if rule in self.unused[symbol]:
             self.unused[symbol].remove(rule)
@@ -116,7 +116,7 @@ class MayhapGenerator:
             variable = token.variable
             value = self.variables.get(variable)
             if value is None:
-                raise MayhapError(f'Variable "{variable}" not found')
+                raise MayhapError(f'Variable not found: {variable}')
             string = value
 
         if token.modifiers:

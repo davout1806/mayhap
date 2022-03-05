@@ -52,8 +52,6 @@
 	- Force uniqueness (fail when running out of unique symbols)
 	- Maximum recursion depth for recursive symbols
 - Validation
-	- Validate symbols after parsing
-	- Validate variables after parsing
 	- Warn about unused symbols
 	- Warn about unused variables
 - Basic optimizations

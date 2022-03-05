@@ -225,6 +225,46 @@ def parse_rule(string):
         raise MayhapError(f'Error parsing rule: {e}') from e
 
 
+def iterate_tokens(tokens):
+    for token in tokens:
+        yield token
+        if isinstance(token, PatternToken):
+            yield from iterate_tokens(token.tokens)
+        elif isinstance(token, AssignmentToken):
+            yield from iterate_tokens(token.value)
+        elif isinstance(token, ChoiceToken):
+            for rule in token.rules:
+                yield from iterate_tokens(rule.tokens)
+
+
+def get_variables(grammar):
+    variables = set()
+    for rules in grammar.values():
+        for rule in rules:
+            for token in iterate_tokens(rule.tokens):
+                if isinstance(token, AssignmentToken):
+                    variables.add(token.variable)
+    return variables
+
+
+def validate_rule(rule, grammar, variables):
+    for token in iterate_tokens(rule.tokens):
+        if (isinstance(token, SymbolToken) and
+                token.symbol not in grammar):
+            raise MayhapError(f'Symbol not found: {token.symbol}')
+        if (isinstance(token, VariableToken) and
+                token.variable not in variables):
+            raise MayhapError(f'Variable not found: {token.variable}')
+
+
+def validate_grammar(grammar):
+    # TODO catch and re-raise validation errors as MayhapGrammarErrors
+    variables = get_variables(grammar)
+    for rules in grammar.values():
+        for rule in rules:
+            validate_rule(rule, grammar, variables)
+
+
 def import_grammar(import_file_name):
     # Default to .mh extension if not specified
     if not isfile(import_file_name) and not import_file_name.endswith('.mh'):

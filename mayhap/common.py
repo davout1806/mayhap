@@ -26,6 +26,8 @@ def join_as_strings(objects, delimiter=''):
 def print_error(e, verbose=True):
     if verbose:
         print(format_exc(), file=stderr)
+    elif isinstance(e, MayhapGrammarError):
+        print(e, file=stderr)
     else:
         print(f'ERROR: {e}', file=stderr)
 
@@ -41,6 +43,5 @@ class MayhapGrammarError(MayhapError):
         self.number = number
         self.line = line
 
-    def print(self):
-        print(f'ERROR (line {self.number}): {self.message}', file=stderr)
-        print(self.line, file=stderr)
+    def __str__(self):
+        return f'ERROR (line {self.number}): {self.message}\n{self.line}'

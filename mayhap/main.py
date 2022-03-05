@@ -5,7 +5,7 @@ from sys import stderr, stdin
 
 from .common import MayhapError, join_as_strings, print_error
 from .generator import MayhapGenerator
-from .parse import grammar_to_string, parse_grammar
+from .parse import grammar_to_string, parse_grammar, validate_grammar
 from .shell import MayhapShell
 
 
@@ -77,6 +77,7 @@ def main():
 
         try:
             grammar = parse_grammar(args.grammar)
+            validate_grammar(grammar)
         except MayhapError as e:
             print_error(e, args.verbose)
             return 1

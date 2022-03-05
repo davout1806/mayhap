@@ -218,12 +218,12 @@ class TestRule(TestCase):
 
     def test_range_modded(self):
         '''
-        Parsing a rule with a numeric range and a modifier: [1-5.ordinal]
+        Parsing a rule with a numeric range and a modifier: [1-5.th]
         '''
         expected = Rule([RangeToken(range(1, 5 + 1),
                          alpha=False,
-                         modifiers=['ordinal'])])
-        actual = parse_rule('[1-5.ordinal]')
+                         modifiers=['th'])])
+        actual = parse_rule('[1-5.th]')
         self.assertEqual(expected, actual)
 
     def test_range_mixed_alpha(self):
