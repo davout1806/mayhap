@@ -35,6 +35,17 @@ MOD_UPPER = 'upper'
 # Convert to title case (capitalize the first letter of each word)
 MOD_TITLE = 'title'
 
+MODIFIERS = set((
+    MOD_MUNDANE,
+    MOD_ARTICLE,
+    MOD_PLURAL,
+    MOD_ORDINAL,
+    MOD_CAPITALIZE,
+    MOD_LOWER,
+    MOD_UPPER,
+    MOD_TITLE,
+))
+
 # Matches dynamic indefinite articles
 # e.g. a(n)
 RE_ARTICLE = re.compile(r'(a)\((n)\)', re.IGNORECASE)

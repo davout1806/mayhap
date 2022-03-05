@@ -34,6 +34,7 @@ from pyparsing import (Combine,
                        pyparsing_common)
 
 from .common import MayhapError, MayhapGrammarError
+from .modifiers import MODIFIERS
 from .rule import Rule
 from .tokens import (LiteralToken,
                      PatternToken,
@@ -99,8 +100,13 @@ def parse_choices_action(toks):
 
 
 def parse_modifiers_action(toks):
-    toks[0].modifiers = tuple(toks[1:])
-    return toks[0]
+    token = toks[0]
+    modifiers = toks[1:]
+    for modifier in modifiers:
+        if modifier not in MODIFIERS:
+            raise MayhapError(f'Invalid modifier: {modifier}')
+    token.modifiers = tuple(modifiers)
+    return token
 
 
 def parse_weight_action(toks):
