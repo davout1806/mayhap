@@ -1,5 +1,5 @@
 @animal_lists
 
 sentence
-	That's definitely not a(n) [mammal]. It's a(n) [reptile].
-	A(n) [insect] is much smaller than a(n) [mammal].
+	That's definitely not [mammal.a]. It's [reptile.a].
+	[insect.a.capitalize] is much smaller than [mammal.a].

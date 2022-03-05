@@ -29,7 +29,7 @@
 	- Symbol reference: `[x = &symbol]`
 	- Symbol dereference: `[$x]` (chooses a different production for symbol each time `x` is accessed)
 - C-style format strings: `['%02d' % [0-60]]`
-- Remove `a(n)` and `(s)` in favor of `.a` and `.s()` (when implemented)
+- Remove `(s)` in favor of `.s()` (when implemented)
 - Query [corpora](https://github.com/aparrish/pycorpora) and other sources for common data
 - Namespaces for imported grammars: `[animals::bird]`
 	- Custom namespace: `@namespace mynamespace`?

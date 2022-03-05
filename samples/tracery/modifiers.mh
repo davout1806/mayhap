@@ -1,6 +1,6 @@
 sentence
 	[color.capitalize] [animal.s] are [often] [mood].
-	A(n) [animal] is [often] [mood], unless it is a(n) [color] one.
+	[animal.a.capitalize] is [often] [mood], unless it is [color.a] one.
 
 often
 	rarely

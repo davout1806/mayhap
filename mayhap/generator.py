@@ -21,7 +21,6 @@ from sys import stderr
 from .common import MayhapError, join_as_strings, print_error
 from .modifiers import (MOD_MUNDANE,
                         apply_modifier,
-                        resolve_indefinite_articles,
                         resolve_plurals)
 from .parse import parse_rule
 from .rule import choose_rule
@@ -143,7 +142,6 @@ class MayhapGenerator:
             self.log(string=string, depth=depth)
         prev_string = string
 
-        string = resolve_indefinite_articles(string)
         string = resolve_plurals(string)
 
         if string != prev_string:

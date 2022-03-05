@@ -46,10 +46,6 @@ MODIFIERS = set((
     MOD_TITLE,
 ))
 
-# Matches dynamic indefinite articles
-# e.g. a(n)
-RE_ARTICLE = re.compile(r'(a)\((n)\)', re.IGNORECASE)
-
 # Matches dynamic pluralization
 # e.g. (s)
 RE_PLURAL = re.compile(r'\((s)\)', re.IGNORECASE)
@@ -67,36 +63,6 @@ def add_article(word):
     if INFLECT:
         return INFLECT.a(word)
     return get_article(word) + ' ' + word
-
-
-def resolve_indefinite_articles(pattern):
-    output = ''
-    last_match = 0
-    for match in RE_ARTICLE.finditer(pattern):
-        output += pattern[last_match:match.start()]
-
-        # Find the next word in the pattern
-        next_word = ''
-        for character in pattern[match.end() + 1:]:
-            if not character.isalpha():
-                break
-            next_word += character
-
-        if next_word:
-            article = get_article(next_word)
-        else:
-            article = 'a'
-
-        if match[1].isupper():
-            article = article[0].upper() + article[1:]
-        if match[2].isupper():
-            article = article[0] + article[1:].upper()
-
-        output += article
-
-        last_match = match.end()
-    output += pattern[last_match:]
-    return output
 
 
 def get_plural(word, number=None):
