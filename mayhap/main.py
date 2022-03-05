@@ -18,6 +18,7 @@ def test(generator):
         for rule in rules:
             try:
                 generator.evaluate_tokens(rule.tokens)
+                generator.reset()
             except MayhapError as e:
                 print(symbol)
                 print('\t' + join_as_strings(rule.tokens))
@@ -64,6 +65,10 @@ def main():
             help='test the grammar by evaluating every rule and printing any '
                  'errors')
     parser.add_argument(
+            '-p', '--persistent',
+            action='store_true',
+            help='carry over uniqueness and variable values across queries')
+    parser.add_argument(
             '-v', '--verbose',
             action='store_true',
             help='explain what is being done; extra messages are written to '
@@ -85,12 +90,13 @@ def main():
         if args.verbose:
             print(grammar_to_string(grammar), file=stderr)
 
-        generator = MayhapGenerator(grammar, args.verbose)
+        generator = MayhapGenerator(grammar, args.persistent, args.verbose)
     elif args.test:
         print('--test requires a grammar to test', file=stderr)
         return 1
     else:
-        generator = MayhapGenerator(verbose=args.verbose)
+        generator = MayhapGenerator(persistent=args.persistent,
+                                    verbose=args.verbose)
 
     if args.test:
         return test(generator)

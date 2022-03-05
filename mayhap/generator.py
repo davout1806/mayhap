@@ -34,8 +34,9 @@ from .tokens import (LiteralToken,
 
 
 class MayhapGenerator:
-    def __init__(self, grammar=None, verbose=False):
+    def __init__(self, grammar=None, persistent=False, verbose=False):
         self.grammar = grammar if grammar else {}
+        self.persistent = persistent
         self.verbose = verbose
         self.variables = {}
         self.unused = deepcopy(self.grammar)
@@ -173,3 +174,6 @@ class MayhapGenerator:
         except MayhapError as e:
             print_error(e, self.verbose)
             return False
+        finally:
+            if not self.persistent:
+                self.reset()

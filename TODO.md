@@ -45,7 +45,6 @@
 - Point to the character where an error happened (strip indentation)
 - Warn when running out of unique symbols
 - Flags
-	- Control whether unused variables are preserved between queries (`persistent`, false by default)
 	- Make symbols default to mundane
 	- Force uniqueness (fail when running out of unique symbols)
 	- Maximum recursion depth for recursive symbols
