@@ -1,12 +1,9 @@
 # TODO
 
-## Refactoring
-
-- Use pyparsing to parse grammars as well as rules
-- Reorganize project to follow Python package structure
 
 ## Grammar Features
 
+- Use `pyparsing` to parse grammars as well as rules
 - Ranges:
 	- Decimal ranges: `[0.5-2.5]` (output uses the same digits of precision as the more precise number in the range)
 	- Dice parsing: `[2d6+3]`

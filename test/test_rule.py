@@ -1,14 +1,14 @@
 from unittest import TestCase
 
-from mayhap import (AssignmentToken,
-                    ChoiceToken,
-                    LiteralToken,
-                    MayhapError,
-                    PatternToken,
-                    RangeToken,
-                    Rule,
-                    SymbolToken,
-                    VariableToken)
+from mayhap.core import (AssignmentToken,
+                         ChoiceToken,
+                         LiteralToken,
+                         MayhapError,
+                         PatternToken,
+                         RangeToken,
+                         Rule,
+                         SymbolToken,
+                         VariableToken)
 
 
 class TestRule(TestCase):

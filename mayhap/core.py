@@ -22,7 +22,6 @@ from os import chdir, isatty
 from os.path import dirname, isfile
 import random
 import re
-import sys
 from sys import stderr, stdin
 from traceback import format_exc
 import typing
@@ -1014,7 +1013,8 @@ def main():
     '''
     Parse arguments and handle input and output.
     '''
-    parser = ArgumentParser(description='A grammar-based random text '
+    parser = ArgumentParser(prog='mayhap',
+                            description='A grammar-based random text '
                                         'generator, inspired by Perchance')
     parser.add_argument(
             'grammar',
@@ -1112,8 +1112,3 @@ def main():
         return 0
 
     return 0
-
-
-if __name__ == '__main__':
-    # Propagate return code
-    sys.exit(main())

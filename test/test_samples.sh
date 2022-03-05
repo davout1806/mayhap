@@ -3,8 +3,7 @@ set -u
 export PATH='/bin:/usr/bin:/usr/local/bin'
 
 path=$(realpath "$(dirname "$0")/..")
-mayhap="$path/mayhap.py"
-samples="$path/samples"
+cd "$path" || exit 1
 
 failures=0
 total=0
@@ -13,12 +12,12 @@ total=0
 # Redirecting find output to the while loop spawns a subshell, preventing
 # variable reassignments
 sample_list=$(mktemp -t 'mayhap_test_samples-XXX')
-find "$samples" -type f -name '*.mh' > "$sample_list"
+find samples -type f -name '*.mh' > "$sample_list"
 
 start_time=$(date +%s)
 while read -r sample; do
-	echo "$mayhap --test $sample"
-	if ! "$mayhap" --test "$sample"; then
+	echo "python -m mayhap --test $sample"
+	if ! python -m mayhap --test "$sample"; then
 		failures=$((failures + 1))
 	fi
 	total=$((total + 1))
