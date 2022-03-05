@@ -1,6 +1,5 @@
 # TODO
 
-
 ## Grammar Features
 
 - Use `pyparsing` to parse grammars as well as rules

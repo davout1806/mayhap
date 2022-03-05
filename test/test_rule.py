@@ -1,14 +1,15 @@
 from unittest import TestCase
 
-from mayhap.core import (AssignmentToken,
-                         ChoiceToken,
-                         LiteralToken,
-                         MayhapError,
-                         PatternToken,
-                         RangeToken,
-                         Rule,
-                         SymbolToken,
-                         VariableToken)
+from mayhap.common import MayhapError
+from mayhap.parse import parse_rule
+from mayhap.rule import Rule
+from mayhap.tokens import (AssignmentToken,
+                           ChoiceToken,
+                           LiteralToken,
+                           PatternToken,
+                           RangeToken,
+                           SymbolToken,
+                           VariableToken)
 
 
 class TestRule(TestCase):
@@ -17,7 +18,7 @@ class TestRule(TestCase):
         Parsing a rule with a top-level string literal: string
         '''
         expected = Rule(['string'])
-        actual = Rule.parse('string')
+        actual = parse_rule('string')
         self.assertEqual(expected, actual)
 
     def test_single_quoted_string(self):
@@ -26,7 +27,7 @@ class TestRule(TestCase):
         'string'
         '''
         expected = Rule(["'string'"])
-        actual = Rule.parse("'string'")
+        actual = parse_rule("'string'")
         self.assertEqual(expected, actual)
 
     def test_double_quoted_string(self):
@@ -35,7 +36,7 @@ class TestRule(TestCase):
         'string'
         '''
         expected = Rule(['"string"'])
-        actual = Rule.parse('"string"')
+        actual = parse_rule('"string"')
         self.assertEqual(expected, actual)
 
     def test_escaped_block(self):
@@ -43,7 +44,7 @@ class TestRule(TestCase):
         Parsing a rule with a backspace-escaped block: \\[not_a_block\\]
         '''
         expected = Rule([LiteralToken('['), 'not_a_block', LiteralToken(']')])
-        actual = Rule.parse('\\[not_a_block\\]')
+        actual = parse_rule('\\[not_a_block\\]')
         self.assertEqual(expected, actual)
 
     def test_escaped_weight(self):
@@ -51,7 +52,7 @@ class TestRule(TestCase):
         Parsing a rule with a backslash-escaped weight: not a weight \\^2
         '''
         expected = Rule(['not a weight ', LiteralToken('^'), '2'])
-        actual = Rule.parse('not a weight \\^2')
+        actual = parse_rule('not a weight \\^2')
         self.assertEqual(expected, actual)
 
     def test_escape_sequences(self):
@@ -59,7 +60,7 @@ class TestRule(TestCase):
         Parsing a rule with backslash-escaped escape sequences: \\t\\n
         '''
         expected = Rule([LiteralToken('\t'), LiteralToken('\n')])
-        actual = Rule.parse('\\t\\n')
+        actual = parse_rule('\\t\\n')
         self.assertEqual(expected, actual)
 
     def test_weight(self):
@@ -67,7 +68,7 @@ class TestRule(TestCase):
         Parsing a rule with a weight: string^0.5
         '''
         expected = Rule(['string'], weight=0.5)
-        actual = Rule.parse('string^0.5')
+        actual = parse_rule('string^0.5')
         self.assertEqual(expected, actual)
 
     def test_weight_whitespace(self):
@@ -75,7 +76,7 @@ class TestRule(TestCase):
         Parsing a rule with a weight separated with whitespace: string ^0.5
         '''
         expected = Rule(['string'], weight=0.5)
-        actual = Rule.parse('string ^0.5')
+        actual = parse_rule('string ^0.5')
         self.assertEqual(expected, actual)
 
     def test_negative_weight(self):
@@ -83,35 +84,35 @@ class TestRule(TestCase):
         Parsing a rule with a negative weight: string ^-5
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('string ^-5')
+            parse_rule('string ^-5')
 
     def test_unclosed_block(self):
         '''
         Parsing a rule with an unclosed block: string [
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('string [')
+            parse_rule('string [')
 
     def test_closed_block(self):
         '''
         Parsing a rule with a prematurely closed block: string ]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('string ]')
+            parse_rule('string ]')
 
     def test_empty_block(self):
         '''
         Parsing a rule with an empty block: []
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[]')
+            parse_rule('[]')
 
     def test_literal(self):
         '''
         Parsing a rule with a literal token: ['literal']
         '''
         expected = Rule([LiteralToken('literal')])
-        actual = Rule.parse("['literal']")
+        actual = parse_rule("['literal']")
         self.assertEqual(expected, actual)
 
     def test_literal_modded(self):
@@ -119,7 +120,7 @@ class TestRule(TestCase):
         Parsing a rule with a literal token and a modifier: ['literal'.s]
         '''
         expected = Rule([LiteralToken('literal', modifiers=['s'])])
-        actual = Rule.parse("['literal'.s]")
+        actual = parse_rule("['literal'.s]")
         self.assertEqual(expected, actual)
 
     def test_literal_escaped_quote(self):
@@ -128,7 +129,7 @@ class TestRule(TestCase):
         ['literal\\'s']
         '''
         expected = Rule([LiteralToken("literal's")])
-        actual = Rule.parse("['literal\\'s']")
+        actual = parse_rule("['literal\\'s']")
         self.assertEqual(expected, actual)
 
     def test_pattern(self):
@@ -136,7 +137,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern token: ["pattern"]
         '''
         expected = Rule([PatternToken(['pattern'])])
-        actual = Rule.parse('["pattern"]')
+        actual = parse_rule('["pattern"]')
         self.assertEqual(expected, actual)
 
     def test_pattern_modded(self):
@@ -144,7 +145,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern token and a modifier: ["pattern".upper]
         '''
         expected = Rule([PatternToken(['pattern'], modifiers=['upper'])])
-        actual = Rule.parse('["pattern".upper]')
+        actual = parse_rule('["pattern".upper]')
         self.assertEqual(expected, actual)
 
     def test_pattern_single_quote(self):
@@ -153,7 +154,7 @@ class TestRule(TestCase):
         ["pattern's"]
         '''
         expected = Rule([PatternToken(["pattern's"])])
-        actual = Rule.parse('["pattern\'s"]')
+        actual = parse_rule('["pattern\'s"]')
         self.assertEqual(expected, actual)
 
     def test_pattern_escaped_quote(self):
@@ -162,7 +163,7 @@ class TestRule(TestCase):
         ["pattern\\"s"]
         '''
         expected = Rule([PatternToken(['pattern', LiteralToken('"'), 's'])])
-        actual = Rule.parse('["pattern\\"s"]')
+        actual = parse_rule('["pattern\\"s"]')
         self.assertEqual(expected, actual)
 
     def test_pattern_nested_literal(self):
@@ -170,7 +171,7 @@ class TestRule(TestCase):
         Parsing a rule with a literal nested in a pattern: ["['literal']"]
         '''
         expected = Rule([PatternToken([LiteralToken('literal')])])
-        actual = Rule.parse('["[\'literal\']"]')
+        actual = parse_rule('["[\'literal\']"]')
         self.assertEqual(expected, actual)
 
     def test_pattern_nested_pattern(self):
@@ -178,7 +179,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern nested in a pattern: ["["pattern"]"]
         '''
         expected = Rule([PatternToken([PatternToken(['pattern'])])])
-        actual = Rule.parse('["["pattern"]"]')
+        actual = parse_rule('["["pattern"]"]')
         self.assertEqual(expected, actual)
 
     def test_range_num(self):
@@ -186,7 +187,7 @@ class TestRule(TestCase):
         Parsing a rule with a numeric range: [1-5]
         '''
         expected = Rule([RangeToken(range(1, 5 + 1), alpha=False)])
-        actual = Rule.parse('[1-5]')
+        actual = parse_rule('[1-5]')
         self.assertEqual(expected, actual)
 
     def test_range_alpha_lower(self):
@@ -195,7 +196,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([RangeToken(range(ord('q'), ord('v') + 1),
                                     alpha=True)])
-        actual = Rule.parse('[q-v]')
+        actual = parse_rule('[q-v]')
         self.assertEqual(expected, actual)
 
     def test_range_alpha_upper(self):
@@ -204,7 +205,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([RangeToken(range(ord('E'), ord('M') + 1),
                                     alpha=True)])
-        actual = Rule.parse('[E-M]')
+        actual = parse_rule('[E-M]')
         self.assertEqual(expected, actual)
 
     def test_range_whitespace(self):
@@ -212,7 +213,7 @@ class TestRule(TestCase):
         Parsing a rule with a numeric range with whitespace: [1 - 5]
         '''
         expected = Rule([RangeToken(range(1, 5 + 1), alpha=False)])
-        actual = Rule.parse('[1 - 5]')
+        actual = parse_rule('[1 - 5]')
         self.assertEqual(expected, actual)
 
     def test_range_modded(self):
@@ -222,7 +223,7 @@ class TestRule(TestCase):
         expected = Rule([RangeToken(range(1, 5 + 1),
                          alpha=False,
                          modifiers=['ordinal'])])
-        actual = Rule.parse('[1-5.ordinal]')
+        actual = parse_rule('[1-5.ordinal]')
         self.assertEqual(expected, actual)
 
     def test_range_mixed_alpha(self):
@@ -230,21 +231,21 @@ class TestRule(TestCase):
         Parsing a rule with a mixed alphabetic/numeric range: [1-a]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[1-a]')
+            parse_rule('[1-a]')
 
     def test_range_mixed_case(self):
         '''
         Parsing a rule with an alphabetic range with mixed cases: [a-B]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[a-B]')
+            parse_rule('[a-B]')
 
     def test_symbol(self):
         '''
         Parsing a rule with a symbol: [symbol]
         '''
         expected = Rule([SymbolToken('symbol')])
-        actual = Rule.parse('[symbol]')
+        actual = parse_rule('[symbol]')
         self.assertEqual(expected, actual)
 
     def test_symbol_whitespace(self):
@@ -252,7 +253,7 @@ class TestRule(TestCase):
         Parsing a rule with a symbol with whitespace: [ symbol ]
         '''
         expected = Rule([SymbolToken('symbol')])
-        actual = Rule.parse('[ symbol ]')
+        actual = parse_rule('[ symbol ]')
         self.assertEqual(expected, actual)
 
     def test_symbol_modded(self):
@@ -260,7 +261,7 @@ class TestRule(TestCase):
         Parsing a rule with a symbol and a modifier: [symbol.mundane]
         '''
         expected = Rule([SymbolToken('symbol', modifiers=['mundane'])])
-        actual = Rule.parse('[symbol.mundane]')
+        actual = parse_rule('[symbol.mundane]')
         self.assertEqual(expected, actual)
 
     def test_bad_symbol(self):
@@ -268,21 +269,21 @@ class TestRule(TestCase):
         Parsing a rule with an invalid symbol name: [symbol with spaces]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[symbol with whitespace]')
+            parse_rule('[symbol with whitespace]')
 
     def test_symbol_eval(self):
         '''
         Parsing a rule with a dynamic symbol dereference: [[symbol]]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[[symbol]]')
+            parse_rule('[[symbol]]')
 
     def test_variable(self):
         '''
         Parsing a rule with a variable: [$variable]
         '''
         expected = Rule([VariableToken('variable')])
-        actual = Rule.parse('[$variable]')
+        actual = parse_rule('[$variable]')
         self.assertEqual(expected, actual)
 
     def test_variable_modded(self):
@@ -290,7 +291,7 @@ class TestRule(TestCase):
         Parsing a rule with a variable and a modifier: [$variable.lower]
         '''
         expected = Rule([VariableToken('variable', modifiers=['lower'])])
-        actual = Rule.parse('[$variable.lower]')
+        actual = parse_rule('[$variable.lower]')
         self.assertEqual(expected, actual)
 
     def test_bad_variable(self):
@@ -298,14 +299,14 @@ class TestRule(TestCase):
         Parsing a rule with an invalid variable name: [$variable with spaces]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[$variable with spaces]')
+            parse_rule('[$variable with spaces]')
 
     def test_variable_eval(self):
         '''
         Parsing a rule with a dynamic variable dereference: [$[variable]]
         '''
         with self.assertRaises(MayhapError):
-            Rule.parse('[$[$variable]]')
+            parse_rule('[$[$variable]]')
 
     def test_assignment_echoed(self):
         '''
@@ -314,7 +315,7 @@ class TestRule(TestCase):
         expected = Rule([AssignmentToken('variable',
                                          [SymbolToken('symbol')],
                                          echo=True)])
-        actual = Rule.parse("[variable=symbol]")
+        actual = parse_rule("[variable=symbol]")
         self.assertEqual(expected, actual)
 
     def test_assignment_silent(self):
@@ -324,7 +325,7 @@ class TestRule(TestCase):
         expected = Rule([AssignmentToken('variable',
                                          [SymbolToken('symbol')],
                                          echo=False)])
-        actual = Rule.parse("[variable~symbol]")
+        actual = parse_rule("[variable~symbol]")
         self.assertEqual(expected, actual)
 
     def test_assignment_whitespace(self):
@@ -335,7 +336,7 @@ class TestRule(TestCase):
         expected = Rule([AssignmentToken('variable',
                                          [SymbolToken('symbol')],
                                          echo=True)])
-        actual = Rule.parse("[variable = symbol]")
+        actual = parse_rule("[variable = symbol]")
         self.assertEqual(expected, actual)
 
     def test_chained_assignment(self):
@@ -347,7 +348,7 @@ class TestRule(TestCase):
                                                           [SymbolToken('z')],
                                                           echo=True)],
                                          echo=True)])
-        actual = Rule.parse("[x=y=z]")
+        actual = parse_rule("[x=y=z]")
         self.assertEqual(expected, actual)
 
     def test_choices(self):
@@ -356,7 +357,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([ChoiceToken([Rule(['choice1']),
                                       Rule(['choice2'])])])
-        actual = Rule.parse("[choice1|choice2]")
+        actual = parse_rule("[choice1|choice2]")
         self.assertEqual(expected, actual)
 
     def test_choices_whitespace(self):
@@ -365,7 +366,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([ChoiceToken([Rule([' choice1 ']),
                                       Rule([' choice2 '])])])
-        actual = Rule.parse("[ choice1 | choice2 ]")
+        actual = parse_rule("[ choice1 | choice2 ]")
         self.assertEqual(expected, actual)
 
     def test_choices_empty(self):
@@ -374,7 +375,7 @@ class TestRule(TestCase):
         '''
         expected = Rule([ChoiceToken([Rule(['choice']),
                                       Rule([])])])
-        actual = Rule.parse("[choice|]")
+        actual = parse_rule("[choice|]")
         self.assertEqual(expected, actual)
 
     def test_assignment_choices(self):
@@ -386,7 +387,7 @@ class TestRule(TestCase):
                                          [ChoiceToken([Rule(['choice1']),
                                                        Rule(['choice2'])])],
                                          echo=True)])
-        actual = Rule.parse("[variable=choice1|choice2]")
+        actual = parse_rule("[variable=choice1|choice2]")
         self.assertEqual(expected, actual)
 
     def test_assignment_choices_whitespace(self):
@@ -398,5 +399,5 @@ class TestRule(TestCase):
                                          [ChoiceToken([Rule([' choice1 ']),
                                                        Rule([' choice2 '])])],
                                          echo=True)])
-        actual = Rule.parse("[ variable = choice1 | choice2 ]")
+        actual = parse_rule("[ variable = choice1 | choice2 ]")
         self.assertEqual(expected, actual)

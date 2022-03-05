@@ -1,22 +1,22 @@
 from unittest import TestCase
 
-from mayhap.core import (AssignmentToken,
-                         ChoiceToken,
-                         Generator,
-                         LiteralToken,
-                         MayhapError,
-                         PatternToken,
-                         RangeToken,
-                         Rule,
-                         SymbolToken,
-                         VariableToken,
-                         MOD_ARTICLE,
-                         MOD_PLURAL,
-                         MOD_ORDINAL,
-                         MOD_CAPITALIZE,
-                         MOD_LOWER,
-                         MOD_UPPER,
-                         MOD_TITLE)
+from mayhap.common import MayhapError
+from mayhap.generator import Generator
+from mayhap.modifiers import (MOD_ARTICLE,
+                              MOD_PLURAL,
+                              MOD_ORDINAL,
+                              MOD_CAPITALIZE,
+                              MOD_LOWER,
+                              MOD_UPPER,
+                              MOD_TITLE)
+from mayhap.rule import Rule
+from mayhap.tokens import (AssignmentToken,
+                           ChoiceToken,
+                           LiteralToken,
+                           PatternToken,
+                           RangeToken,
+                           SymbolToken,
+                           VariableToken)
 
 
 class TestGenerate(TestCase):

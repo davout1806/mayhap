@@ -1,6 +1,6 @@
 import sys
 
-from mayhap.core import main
+from .main import main
 
 # Propagate return code
 sys.exit(main())

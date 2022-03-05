@@ -1,6 +1,8 @@
 from unittest import TestCase
 
-from mayhap.core import MayhapGrammarError, Rule, parse_grammar
+from mayhap.common import MayhapGrammarError
+from mayhap.parse import parse_grammar
+from mayhap.rule import Rule
 
 
 class TestGrammar(TestCase):
