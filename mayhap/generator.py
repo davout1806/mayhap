@@ -20,16 +20,7 @@ from sys import stderr
 
 from .common import MayhapError, join_as_strings, print_error
 from .modifiers import (MOD_MUNDANE,
-                        MOD_ARTICLE,
-                        MOD_PLURAL,
-                        MOD_ORDINAL,
-                        MOD_CAPITALIZE,
-                        MOD_LOWER,
-                        MOD_UPPER,
-                        MOD_TITLE,
-                        add_article,
-                        get_plural,
-                        get_ordinal,
+                        apply_modifier,
                         resolve_indefinite_articles,
                         resolve_plurals)
 from .parse import parse_rule
@@ -118,7 +109,8 @@ class Generator:
                 string = str(choice)
         elif isinstance(token, SymbolToken):
             symbol = self.evaluate_tokens(token.symbol, depth=depth + 1)
-            rule = self.produce(symbol)
+            unique = MOD_MUNDANE not in token.modifiers
+            rule = self.produce(symbol, unique)
             string = self.evaluate_tokens(rule.tokens, depth=depth + 1)
         elif isinstance(token, VariableToken):
             variable = token.variable
@@ -131,24 +123,7 @@ class Generator:
             self.log(tokens=[LiteralToken(string, token.modifiers)],
                      depth=depth)
             for modifier in token.modifiers:
-                if modifier == MOD_PLURAL:
-                    string = get_plural(string)
-                elif modifier == MOD_ARTICLE:
-                    string = add_article(string)
-                elif modifier == MOD_ORDINAL:
-                    string = get_ordinal(string)
-                elif modifier == MOD_CAPITALIZE:
-                    string = string.capitalize()
-                elif modifier == MOD_LOWER:
-                    string = string.lower()
-                elif modifier == MOD_UPPER:
-                    string = string.upper()
-                elif modifier == MOD_TITLE:
-                    string = string.title()
-                elif modifier == MOD_MUNDANE:
-                    pass
-                else:
-                    raise MayhapError(f'Unknown modifier "{modifier}"')
+                string = apply_modifier(string, modifier)
 
         self.log(string=string, depth=depth)
 

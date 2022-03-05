@@ -1,6 +1,8 @@
 import re
 import typing
 
+from .common import MayhapError
+
 
 try:
     import inflect
@@ -154,3 +156,23 @@ def get_ordinal(number):
         if last_digit == 3:
             return f'{number}rd'
     return f'{number}th'
+
+
+def apply_modifier(string, modifier):
+    if modifier == MOD_PLURAL:
+        return get_plural(string)
+    if modifier == MOD_ARTICLE:
+        return add_article(string)
+    if modifier == MOD_ORDINAL:
+        return get_ordinal(string)
+    if modifier == MOD_CAPITALIZE:
+        return string.capitalize()
+    if modifier == MOD_LOWER:
+        return string.lower()
+    if modifier == MOD_UPPER:
+        return string.upper()
+    if modifier == MOD_TITLE:
+        return string.title()
+    if modifier == MOD_MUNDANE:
+        return string
+    raise MayhapError(f'Unknown modifier "{modifier}"')
