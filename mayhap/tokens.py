@@ -33,7 +33,7 @@ class LiteralToken(Token):
 
     def __repr__(self):
         return (f'LiteralToken(string={repr(self.string)}, '
-                f'modifiers={self.modifiers})')
+                f'modifiers={repr(self.modifiers)})')
 
     def __eq__(self, other):
         return (isinstance(other, LiteralToken) and
@@ -55,8 +55,8 @@ class PatternToken(Token):
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
-        return (f'PatternToken(tokens={self.tokens}, '
-                f'modifiers={self.modifiers})')
+        return (f'PatternToken(tokens={repr(self.tokens)}, '
+                f'modifiers={repr(self.modifiers)})')
 
     def __eq__(self, other):
         return (isinstance(other, PatternToken) and
@@ -91,8 +91,8 @@ class RangeToken(Token):
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
-        return (f'RangeToken(range={self.range}, '
-                f'modifiers={self.modifiers})')
+        return (f'RangeToken(range={repr(self.range)}, '
+                f'modifiers={repr(self.modifiers)})')
 
     def __eq__(self, other):
         return (isinstance(other, RangeToken) and
@@ -115,8 +115,8 @@ class SymbolToken(Token):
         return f"[{'.'.join(terms)}]"
 
     def __repr__(self):
-        return (f'SymbolToken(symbol="{self.symbol}", '
-                f'modifiers={self.modifiers})')
+        return (f'SymbolToken(symbol={repr(self.symbol)}, '
+                f'modifiers={repr(self.modifiers)})')
 
     def __eq__(self, other):
         return (isinstance(other, SymbolToken) and
@@ -136,8 +136,8 @@ class VariableToken(Token):
         return f'[${join_as_strings(self.variable)}]'
 
     def __repr__(self):
-        return (f'VariableToken(variable="{self.variable}", '
-                f'modifiers={self.modifiers})')
+        return (f'VariableToken(variable={repr(self.variable)}, '
+                f'modifiers={repr(self.modifiers)})')
 
     def __eq__(self, other):
         return (isinstance(other, VariableToken) and
@@ -160,9 +160,9 @@ class AssignmentToken(Token):
                 f'{join_as_strings(self.value)}]')
 
     def __repr__(self):
-        return (f'AssignmentToken(variable={self.variable}, '
-                f'value={self.value}, '
-                f'echo={self.echo})')
+        return (f'AssignmentToken(variable={repr(self.variable)}, '
+                f'value={repr(self.value)}, '
+                f'echo={repr(self.echo)})')
 
     def __eq__(self, other):
         return (isinstance(other, AssignmentToken) and
@@ -182,7 +182,7 @@ class ChoiceToken(Token):
         return f'[{join_as_strings(self.rules, delimiter="|")}]'
 
     def __repr__(self):
-        return f'ChoiceToken(rules={self.rules})'
+        return f'ChoiceToken(rules={repr(self.rules)})'
 
     def __eq__(self, other):
         return (isinstance(other, ChoiceToken) and

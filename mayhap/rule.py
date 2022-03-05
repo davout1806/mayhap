@@ -24,15 +24,15 @@ DEFAULT_WEIGHT = 1.0
 
 
 class Rule:
-    def __init__(self, tokens, weight=DEFAULT_WEIGHT):
-        self.tokens = tuple(tokens)
+    def __init__(self, tokens=None, weight=DEFAULT_WEIGHT):
+        self.tokens = tuple(tokens) if tokens else tuple()
         self.weight = weight
 
     def __str__(self):
         return f'{join_as_strings(self.tokens)}^{self.weight}'
 
     def __repr__(self):
-        return f'Rule(tokens={self.tokens}, weight={self.weight})'
+        return f'Rule(tokens={repr(self.tokens)}, weight={self.weight})'
 
     def __eq__(self, other):
         return (isinstance(other, Rule) and

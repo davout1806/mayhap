@@ -5,8 +5,6 @@ from mayhap.parse import parse_rule
 from mayhap.rule import Rule
 from mayhap.tokens import (AssignmentToken,
                            ChoiceToken,
-                           LiteralToken,
-                           PatternToken,
                            RangeToken,
                            SymbolToken,
                            VariableToken)
@@ -43,7 +41,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a backspace-escaped block: \\[not_a_block\\]
         '''
-        expected = Rule([LiteralToken('['), 'not_a_block', LiteralToken(']')])
+        expected = Rule(['[not_a_block]'])
         actual = parse_rule('\\[not_a_block\\]')
         self.assertEqual(expected, actual)
 
@@ -51,7 +49,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a backslash-escaped weight: not a weight \\^2
         '''
-        expected = Rule(['not a weight ', LiteralToken('^'), '2'])
+        expected = Rule(['not a weight ^2'])
         actual = parse_rule('not a weight \\^2')
         self.assertEqual(expected, actual)
 
@@ -59,7 +57,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with backslash-escaped escape sequences: \\t\\n
         '''
-        expected = Rule([LiteralToken('\t'), LiteralToken('\n')])
+        expected = Rule(['\t\n'])
         actual = parse_rule('\\t\\n')
         self.assertEqual(expected, actual)
 
@@ -111,7 +109,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a literal token: ['literal']
         '''
-        expected = Rule([LiteralToken('literal')])
+        expected = Rule(['literal'])
         actual = parse_rule("['literal']")
         self.assertEqual(expected, actual)
 
@@ -119,7 +117,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a literal token and a modifier: ['literal'.s]
         '''
-        expected = Rule([LiteralToken('literal', modifiers=['s'])])
+        expected = Rule(['literals'])
         actual = parse_rule("['literal'.s]")
         self.assertEqual(expected, actual)
 
@@ -128,7 +126,7 @@ class TestRule(TestCase):
         Parsing a rule with a literal token with an escaped single quote:
         ['literal\\'s']
         '''
-        expected = Rule([LiteralToken("literal's")])
+        expected = Rule(["literal's"])
         actual = parse_rule("['literal\\'s']")
         self.assertEqual(expected, actual)
 
@@ -136,7 +134,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a pattern token: ["pattern"]
         '''
-        expected = Rule([PatternToken(['pattern'])])
+        expected = Rule(['pattern'])
         actual = parse_rule('["pattern"]')
         self.assertEqual(expected, actual)
 
@@ -144,7 +142,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a pattern token and a modifier: ["pattern".upper]
         '''
-        expected = Rule([PatternToken(['pattern'], modifiers=['upper'])])
+        expected = Rule(['PATTERN'])
         actual = parse_rule('["pattern".upper]')
         self.assertEqual(expected, actual)
 
@@ -153,7 +151,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern token with a single quote:
         ["pattern's"]
         '''
-        expected = Rule([PatternToken(["pattern's"])])
+        expected = Rule(["pattern's"])
         actual = parse_rule('["pattern\'s"]')
         self.assertEqual(expected, actual)
 
@@ -162,7 +160,7 @@ class TestRule(TestCase):
         Parsing a rule with a pattern token with an escaped double quote:
         ["pattern\\"s"]
         '''
-        expected = Rule([PatternToken(['pattern', LiteralToken('"'), 's'])])
+        expected = Rule(['pattern"s'])
         actual = parse_rule('["pattern\\"s"]')
         self.assertEqual(expected, actual)
 
@@ -170,7 +168,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a literal nested in a pattern: ["['literal']"]
         '''
-        expected = Rule([PatternToken([LiteralToken('literal')])])
+        expected = Rule(['literal'])
         actual = parse_rule('["[\'literal\']"]')
         self.assertEqual(expected, actual)
 
@@ -178,7 +176,7 @@ class TestRule(TestCase):
         '''
         Parsing a rule with a pattern nested in a pattern: ["["pattern"]"]
         '''
-        expected = Rule([PatternToken([PatternToken(['pattern'])])])
+        expected = Rule(['pattern'])
         actual = parse_rule('["["pattern"]"]')
         self.assertEqual(expected, actual)
 

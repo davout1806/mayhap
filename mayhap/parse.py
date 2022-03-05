@@ -34,7 +34,7 @@ from pyparsing import (Combine,
                        pyparsing_common)
 
 from .common import MayhapError, MayhapGrammarError
-from .modifiers import MODIFIERS
+from .modifiers import MODIFIERS, apply_modifier
 from .rule import Rule
 from .tokens import (LiteralToken,
                      PatternToken,
@@ -95,16 +95,39 @@ def parse_assignment_silent_action(toks):
 
 
 def parse_choices_action(toks):
-    rules = [(rule if rule else Rule([])) for rule in toks]
+    rules = [(rule if rule else Rule()) for rule in toks]
     return ChoiceToken(tuple(rules))
 
 
 def parse_modifiers_action(toks):
     token = toks[0]
     modifiers = toks[1:]
+
+    if not modifiers:
+        if isinstance(token, LiteralToken):
+            return token.string
+        if isinstance(token, PatternToken):
+            return token.tokens
+        return token
+
     for modifier in modifiers:
         if modifier not in MODIFIERS:
             raise MayhapError(f'Invalid modifier: {modifier}')
+
+    if isinstance(token, LiteralToken):
+        string = token.string
+        for modifier in modifiers:
+            string = apply_modifier(string, modifier)
+        return string
+
+    if isinstance(token, PatternToken):
+        token.tokens = simplify_tokens(token.tokens)
+        if len(token.tokens) == 1 and isinstance(token.tokens[0], str):
+            string = token.tokens[0]
+            for modifier in modifiers:
+                string = apply_modifier(string, modifier)
+            return string
+
     token.modifiers = tuple(modifiers)
     return token
 
@@ -113,14 +136,33 @@ def parse_weight_action(toks):
     return WeightToken(toks[0])
 
 
+def simplify_tokens(tokens):
+    i = 0
+    simplified = []
+    for token in tokens:
+        if (i > 0 and
+                isinstance(token, str) and
+                isinstance(simplified[i - 1], str)):
+            simplified[i - 1] += token
+        elif isinstance(token, tuple):
+            subtokens = simplify_tokens(token)
+            simplified += subtokens
+            i += len(subtokens)
+        else:
+            simplified.append(token)
+            i += 1
+    return tuple(simplified)
+
+
 def parse_rule_action(toks):
     if len(toks) > 0 and isinstance(toks[-1], WeightToken):
         if len(toks) > 1:
             tokens = toks[:-2] + [toks[-2].rstrip()]
+            tokens = simplify_tokens(tokens)
         else:
             tokens = []
         return Rule(tokens, toks[-1].weight)
-    return Rule(toks)
+    return Rule(simplify_tokens(toks))
 
 
 # Parser expressions

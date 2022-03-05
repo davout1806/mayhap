@@ -8,8 +8,6 @@
 	- Dice parsing: `[2d6+3]`
 		- Regex: `(\d+)d(\d+)([+-](\d+)d(\d+))*([+-]\d+)?`
 		- `dice` module
-- Fractional weights(?): `^2/5.5`
-	- See `pyparsing_common.fraction`
 - Repeated accesses: `[5 * 0-9]`
 - Inflections:
 	- Conditional pluralization: `[x=1-5] [item.s($x)]`
@@ -51,19 +49,8 @@
 	- Make symbols default to mundane
 	- Force uniqueness (fail when running out of unique symbols)
 	- Maximum recursion depth for recursive symbols
-- Validation
-	- Warn about unused symbols
-	- Warn about unused variables
-- Basic optimizations
-	- Replace unmodified literal tokens into strings and merge with neighbors
-	- Unpack unmodified pattern tokens
-	- Resolve deterministic literal modifiers while parsing
-	- Resolve deterministic inflections after parsing
 - Arguments
-	- Enable/disable warnings
-	- Enable/disable validation
 	- Enable/disable optimizations
-	- Just validate grammar and exit
 	- Print standardized grammar (output of `print_grammar`)
 - Shell commands
 	- Save grammar to file: `/export path_to_grammar.mh`
@@ -76,6 +63,7 @@
 - Syntax documentation/tutorial
 - Test suite
 	- Importing
+	- Test with and without optimizations
 	- Regression tests (compile all samples and compare new compiles against saved versions)
 	- Performance tests (generate large grammar and query files)
 - Create a vim syntax file for Mayhap grammars
