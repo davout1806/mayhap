@@ -34,7 +34,7 @@ from .tokens import (LiteralToken,
                      ChoiceToken)
 
 
-class Generator:
+class MayhapGenerator:
     def __init__(self, grammar, verbose=False):
         self.grammar = grammar
         self.verbose = verbose

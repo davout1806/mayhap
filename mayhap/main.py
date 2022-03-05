@@ -4,7 +4,7 @@ from os.path import dirname
 from sys import stderr, stdin
 
 from .common import MayhapError, join_as_strings, print_error
-from .generator import Generator
+from .generator import MayhapGenerator
 from .parse import grammar_to_string, parse_grammar
 from .shell import MayhapShell
 
@@ -60,7 +60,7 @@ def main():
     if args.verbose:
         print(grammar_to_string(grammar), file=stderr)
 
-    generator = Generator(grammar, args.verbose)
+    generator = MayhapGenerator(grammar, args.verbose)
 
     if args.test:
         failures = 0
