@@ -35,8 +35,8 @@ from .tokens import (LiteralToken,
 
 
 class MayhapGenerator:
-    def __init__(self, grammar, verbose=False):
-        self.grammar = grammar
+    def __init__(self, grammar=None, verbose=False):
+        self.grammar = grammar if grammar else {}
         self.verbose = verbose
         self.variables = {}
         self.unused = deepcopy(self.grammar)

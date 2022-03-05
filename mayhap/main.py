@@ -9,6 +9,28 @@ from .parse import grammar_to_string, parse_grammar
 from .shell import MayhapShell
 
 
+def test(generator):
+    '''
+    Test the given grammar by producing every rule.
+    '''
+    failures = 0
+    for symbol, rules in generator.grammar.items():
+        for rule in rules:
+            try:
+                generator.evaluate_tokens(rule.tokens)
+            except MayhapError as e:
+                print(symbol)
+                print('\t' + join_as_strings(rule.tokens))
+                print_error(e, generator.verbose)
+                print()
+                failures += 1
+    if failures > 0:
+        print(f'FAILED (failures={failures})')
+    else:
+        print('OK')
+    return failures
+
+
 def main():
     '''
     Parse arguments and handle input and output.
@@ -18,6 +40,7 @@ def main():
                                         'generator, inspired by Perchance')
     parser.add_argument(
             'grammar',
+            nargs='?',
             type=FileType('r'),
             help='file that defines the grammar to generate from')
     parser.add_argument(
@@ -47,38 +70,29 @@ def main():
                  'stderr, so stdout is still clean')
     args = parser.parse_args()
 
-    # Change working directory to directory containing the given grammar
-    # This allows for import paths relative to the given grammar
-    chdir(dirname(args.grammar.name))
+    if args.grammar:
+        # Change working directory to directory containing the given grammar
+        # This allows for import paths relative to the given grammar
+        chdir(dirname(args.grammar.name))
 
-    try:
-        grammar = parse_grammar(args.grammar)
-    except MayhapError as e:
-        print_error(e, args.verbose)
+        try:
+            grammar = parse_grammar(args.grammar)
+        except MayhapError as e:
+            print_error(e, args.verbose)
+            return 1
+
+        if args.verbose:
+            print(grammar_to_string(grammar), file=stderr)
+
+        generator = MayhapGenerator(grammar, args.verbose)
+    elif args.test:
+        print('--test requires a grammar to test', file=stderr)
         return 1
-
-    if args.verbose:
-        print(grammar_to_string(grammar), file=stderr)
-
-    generator = MayhapGenerator(grammar, args.verbose)
+    else:
+        generator = MayhapGenerator(verbose=args.verbose)
 
     if args.test:
-        failures = 0
-        for symbol, rules in grammar.items():
-            for rule in rules:
-                try:
-                    generator.evaluate_tokens(rule.tokens)
-                except MayhapError as e:
-                    print(symbol)
-                    print('\t' + join_as_strings(rule.tokens))
-                    print_error(e, generator.verbose)
-                    print()
-                    failures += 1
-        if failures > 0:
-            print(f'FAILED (failures={failures})')
-        else:
-            print('OK')
-        return failures
+        return test(generator)
 
     # If a pattern was given, generate it and exit
     if args.pattern:

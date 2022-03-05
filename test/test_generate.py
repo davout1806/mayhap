@@ -24,7 +24,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a string literal: string
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'string'
         actual = generator.evaluate_token('string')
         self.assertEqual(expected, actual)
@@ -33,7 +33,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal token: ['literal']
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'literal'
         actual = generator.evaluate_token(LiteralToken('literal'))
         self.assertEqual(expected, actual)
@@ -42,7 +42,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a pattern token: ["pattern"]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'pattern'
         actual = generator.evaluate_token(PatternToken(['pattern']))
         self.assertEqual(expected, actual)
@@ -51,7 +51,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal nested in a pattern: ["['literal']"]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'literal'
         actual = generator.evaluate_token(PatternToken([
             LiteralToken('literal')
@@ -62,7 +62,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a numeric range: [1-5]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         actual = generator.evaluate_token(RangeToken(range(1, 5 + 1),
                                                      alpha=False))
         self.assertTrue(int(actual) in range(1, 5 + 1))
@@ -71,7 +71,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating an alphabetic range: [a-c]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         actual = generator.evaluate_token(RangeToken(
             range(ord('a'), ord('c') + 1),
             alpha=True))
@@ -94,7 +94,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a variable: [$variable]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         generator.variables = {'variable': 'value'}
         expected = 'value'
         actual = generator.evaluate_token(VariableToken('variable'))
@@ -104,7 +104,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating an echoed variable assignment: [variable='value']
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'value'
         actual = generator.evaluate_token(AssignmentToken(
             'variable',
@@ -116,7 +116,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a silent variable assignment: [variable~'value']
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = ''
         actual = generator.evaluate_token(AssignmentToken(
             'variable',
@@ -129,7 +129,7 @@ class TestGenerate(TestCase):
         Evaluating a variable before and after assignment:
         [$variable][variable~'value2'][$variable]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         generator.variables = {'variable': 'value1'}
         expected = 'value1value2'
         actual = generator.evaluate_tokens([
@@ -145,7 +145,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating choices: [choice1|choice2]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         actual = generator.evaluate_token(ChoiceToken([Rule(['choice1']),
                                                        Rule(['choice2'])]))
         self.assertTrue(actual in ('choice1', 'choice2'))
@@ -155,7 +155,7 @@ class TestGenerate(TestCase):
         Evaluating a literal with the indefinite article modifier:
         ['article'.a]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'an article'
         actual = generator.evaluate_token(LiteralToken(
             'article',
@@ -166,7 +166,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal with the plural modifier: ['plural'.s]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'plurals'
         actual = generator.evaluate_token(LiteralToken(
             'plural',
@@ -177,7 +177,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal with the ordinal modifier: ['1'.th]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = '1st'
         actual = generator.evaluate_token(LiteralToken(
             '1',
@@ -189,7 +189,7 @@ class TestGenerate(TestCase):
         Evaluating a literal with the capitalize modifier:
         ['capitalize'.capitalize]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'Capitalize'
         actual = generator.evaluate_token(LiteralToken(
             'capitalize',
@@ -200,7 +200,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal with the lower modifier: ['LOWER'.lower]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'lower'
         actual = generator.evaluate_token(LiteralToken(
             'LOWER',
@@ -211,7 +211,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal with the upper modifier: ['upper'.upper]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'UPPER'
         actual = generator.evaluate_token(LiteralToken(
             'upper',
@@ -222,7 +222,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal with the title modifier: ['title case'.title]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'Title Case'
         actual = generator.evaluate_token(LiteralToken(
             'title case',
@@ -247,7 +247,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a literal string pattern: string
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         expected = 'string'
         actual = generator.evaluate_input('string')
         self.assertEqual(expected, actual)
@@ -256,7 +256,7 @@ class TestGenerate(TestCase):
         '''
         Evaluating a symbol that does not exist: [symbol]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         with self.assertRaises(MayhapError):
             generator.evaluate_token(SymbolToken('symbol'))
 
@@ -264,6 +264,6 @@ class TestGenerate(TestCase):
         '''
         Evaluating a variable before it is defined: [$variable]
         '''
-        generator = MayhapGenerator({})
+        generator = MayhapGenerator()
         with self.assertRaises(MayhapError):
             generator.evaluate_token(VariableToken('variable'))
