@@ -10,27 +10,23 @@ Dependencies:
 - [pyparsing](https://github.com/pyparsing/pyparsing)
 - [inflect](https://github.com/jaraco/inflect) (optional; required for quality articles, plurals, and ordinals)
 
-To install Mayhap, clone the repository and install the required dependencies by running:
+To install Mayhap, run:
 
 ```sh
-pip install -r requirements.txt
+git clone https://github.com/Maugrift/mayhap.git
+cd mayhap
+pip install .
 ```
 
 ## Usage
 
-To run Mayhap from source, execute the following command:
-
-```sh
-python -m mayhap grammar.mh [pattern]
-```
-
-If you've installed the Mayhap package, you can just run:
+After installing mayhap, run:
 
 ```sh
 mayhap grammar.mh [pattern]
 ```
 
-In both of the above commands, `grammar.mh` may be any Mayhap grammar file (see Grammars).
+`grammar.mh` may be any Mayhap grammar file (see Grammars).
 If a `pattern` is given, it will be expanded and printed to standard output.
 If no `pattern` is given, patterns will be read line-by-line from standard input, and their expansions printed to standard output.
 
@@ -38,6 +34,12 @@ For detailed usage information, run:
 
 ```sh
 mayhap --help
+```
+
+To run Mayhap from source, run the following within the repository directory:
+
+```sh
+python -m mayhap
 ```
 
 ### Grammars
